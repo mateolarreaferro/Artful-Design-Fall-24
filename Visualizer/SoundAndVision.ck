@@ -230,7 +230,7 @@ fun void map2spiralSpectrogram(vec2 out[], vec3 color_out[]) {
     
     // Calculate radius and scale for spiral
     smoothValue(base_spiral_radius, 2 + 0.2 * Math.cos(now / second * 0.5 * Math.PI), spiral_radius_smoothing_factor) => base_spiral_radius;
-    0.1 => float base_spiral_scale;
+     0.1 => float base_spiral_scale;
     
     // Update spiral rotation time
     spiral_rotation_time + GG.dt() * 0.2 => spiral_rotation_time;
@@ -305,21 +305,24 @@ while (true) {
     spiral_spectrogram.colors(spiral_colors);
     
     // Adjust spiral width based on magnitude
-    0.4 * calculateOverallMagnitude() => spiral_spectrogram.width;
+    0.2 * calculateOverallMagnitude() => spiral_spectrogram.width;
     
     // Get the highest frequency bin and color for particles
     getHighestFrequencyBin() => int highest_bin;
     spectrumColorMap[highest_bin % numColors] => vec3 particle_color;
 
-    // Check if amplitude exceeds the threshold, then spawn particles
-    vec3 particle_pos;
-    0 => particle_pos.x;
-    0 => particle_pos.y;
-    0 => particle_pos.z;
-    
-    if (calculateOverallMagnitude() > amplitude_threshold) {
-        // Spawn particles in the center of the screen
-        ps.spawnParticle(particle_pos, particle_color);
+    // Check if highest_bin is within bounds
+    if (highest_bin >= 0 && highest_bin < smoothed_radius.size()) {
+        // Spawn particles at the outer layer of the spiral
+        vec3 particle_pos;
+        smoothed_radius[highest_bin] * Math.cos(previous_angle_increment * highest_bin) => particle_pos.x;
+        smoothed_radius[highest_bin] * Math.sin(previous_angle_increment * highest_bin) => particle_pos.y;
+        0 => particle_pos.z;
+        
+        if (calculateOverallMagnitude() > amplitude_threshold) {
+            // Spawn particles in the outer layer of the spiral
+            ps.spawnParticle(particle_pos, particle_color);
+        }
     }
     
     // Update particles
