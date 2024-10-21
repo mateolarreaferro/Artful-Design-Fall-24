@@ -5,7 +5,7 @@
 
 //************************** AUDIO SETTINGS **************************//
 // Audio window and buffer sizes
-512 => int WINDOW_SIZE;
+700 => int WINDOW_SIZE;
 WINDOW_SIZE * 2 => int FFT_SIZE;
 
 // Gain and input setup
@@ -43,6 +43,49 @@ GCamera camera --> GG.scene();
 camera.perspective();
 GG.scene().camera().posZ(99); 
 GG.scene().camera().clip(1, 200);
+
+// Create a thicker frame using planes attached to the camera, positioned at the screen's perimeter
+
+// Adjust these values to better match the screen size and the desired frame thickness
+15 => float frame_thickness;  // Thickness of the frame
+10 => float frame_offset;      // Offset of the frame planes from the center
+
+// West plane (left side)
+GPlane westPlane --> camera;
+-75.0 => westPlane.posX;           // Adjust to push to the left side of the screen
+frame_thickness => westPlane.scaX; // Adjust width of the plane (thicker)
+150.0 => westPlane.scaY;           // Height of the frame
+0.1 => westPlane.scaZ;             // Thin depth to keep it 2D
+@(1.0, 1.0, 1.0) => westPlane.color; // White color
+
+// East plane (right side)
+GPlane eastPlane --> camera;
+75.0 => eastPlane.posX;             // Push to the right side of the screen
+frame_thickness => eastPlane.scaX;  // Adjust width of the plane (thicker)
+150.0 => eastPlane.scaY;            // Height of the frame
+0.1 => eastPlane.scaZ;              // Thin depth
+@(1.0, 1.0, 1.0) => eastPlane.color; // White color
+
+// North plane (top)
+GPlane northPlane --> camera;
+50.0 => northPlane.posY;             // Move to the top of the screen
+150.0 => northPlane.scaX;            // Width to cover the screen
+frame_thickness => northPlane.scaY;  // Thicker height for the frame
+0.1 => northPlane.scaZ;              // Thin depth
+@(1.0, 1.0, 1.0) => northPlane.color; // White color
+
+// South plane (bottom)
+GPlane southPlane --> camera;
+-50.0 => southPlane.posY;            // Move to the bottom of the screen
+150.0 => southPlane.scaX;            // Width to cover the screen
+frame_thickness => southPlane.scaY;  // Thicker height for the frame
+0.1 => southPlane.scaZ;              // Thin depth
+@(1.0, 1.0, 1.0) => southPlane.color; // White color
+
+// Adjust the camera field of view and ensure it's correctly positioned
+GG.scene().camera().fov(45);  // Field of view adjustment if needed
+GG.scene().camera().clip(1, 200);  // Adjust clipping range if the planes are out of view
+
 
 // Post-processing effects
 GG.outputPass() @=> OutputPass output_pass;
@@ -83,9 +126,9 @@ vec3 spiral_colors[max_bin - min_bin];
 
 // Spiral and modulation settings
 .001 => float previous_angle_increment;
-0.1 => float modulation_threshold; // high value changes shape --> 0.5
+0.001 => float modulation_threshold; // high value changes shape --> 0.5
 .001 => float spiral_rotation_time;
-4.0 => float base_spiral_radius;
+2.0 => float base_spiral_radius;
 
 // Spectrum color map (from blue to red)
 6 => int numColors;
@@ -155,7 +198,7 @@ class ParticleSystem {
             p.particle_mesh.sca(1 - t);
 
             // Update angle for circular motion (to complete the circle in 1 second)
-            p.angle + (2 * Math.PI * dt / particle_lifetime) => p.angle;
+            p.angle + (4 * Math.PI * dt / particle_lifetime) => p.angle;
 
             // Calculate the new position on the circular path
             p.radius * Math.cos(p.angle) => float x;
@@ -177,7 +220,7 @@ class ParticleSystem {
             // Set initial conditions for circular motion
             0 => p.angle; // Start at 0 degrees
             radius => p.radius; // Use the provided radius
-            (2 * Math.PI / particle_lifetime) => p.angular_velocity; // Set angular velocity to complete a circle in 1 second
+            (Math.PI / particle_lifetime) => p.angular_velocity; // Set angular velocity to complete a circle in 1 second
 
             color => p.color;
             color => p.particle_mat.color;
