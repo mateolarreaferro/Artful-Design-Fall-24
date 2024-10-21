@@ -1,6 +1,6 @@
 //-----------------------------------------------------------------------------
 // name: sacredvis.ck
-// desc: milestone MUS256/CS476 - enhanced with a particle system
+// desc: milestone MUS256/CS476 - enhanced with circular particle system
 //-----------------------------------------------------------------------------
 
 //************************** AUDIO SETTINGS **************************//
@@ -122,7 +122,10 @@ class Particle {
     GMesh particle_mesh(particle_geo, particle_mat) --> GG.scene();
     0 => particle_mesh.sca;
 
-    vec2 direction;
+    // Circular motion variables
+    float angle;       // Angle around the center of the circle
+    float radius;      // Radius of the circular path
+    float angular_velocity; // Speed of the rotation (angular velocity)
     time spawn_time;
     vec3 color;
 }
@@ -133,6 +136,8 @@ class ParticleSystem {
     fun void update(float dt) {
         for (0 => int i; i < num_active; i++) {
             particles[i] @=> Particle p;
+
+            // Check if the particle's lifetime has ended
             if (now - p.spawn_time >= particle_lifetime::second) {
                 0 => p.particle_mesh.sca;
                 num_active--;
@@ -142,24 +147,40 @@ class ParticleSystem {
                 continue;
             }
 
-            // Use proper assignment and time expression
+            // Calculate normalized lifetime (t)
             (now - p.spawn_time) / particle_lifetime::second => float t;
+            
+            // Gradually fade particle's color and scale down
             p.color + (particle_end_color.val() - p.color) * t => p.particle_mat.color;
             p.particle_mesh.sca(1 - t);
 
-            (dt * p.direction).x => p.particle_mesh.translateX;
-            (dt * p.direction).y => p.particle_mesh.translateY;
+            // Update angle for circular motion (to complete the circle in 1 second)
+            p.angle + (2 * Math.PI * dt / particle_lifetime) => p.angle;
+
+            // Calculate the new position on the circular path
+            p.radius * Math.cos(p.angle) => float x;
+            p.radius * Math.sin(p.angle) => float y;
+
+            // Create a vec3 for the position and apply it
+            vec3 particle_position;
+            x => particle_position.x;
+            y => particle_position.y;
+            0 => particle_position.z;
+            p.particle_mesh.pos(particle_position);
         }
     }
 
-    fun void spawnParticle(vec3 pos, vec3 color) {
+    fun void spawnParticle(vec3 pos, vec3 color, float radius) {
         if (num_active < PARTICLE_POOL_SIZE) {
             particles[num_active] @=> Particle p;
 
+            // Set initial conditions for circular motion
+            0 => p.angle; // Start at 0 degrees
+            radius => p.radius; // Use the provided radius
+            (2 * Math.PI / particle_lifetime) => p.angular_velocity; // Set angular velocity to complete a circle in 1 second
+
             color => p.color;
             color => p.particle_mat.color;
-            Math.random2f(0, 2 * Math.PI) => float random_angle;
-            @(Math.cos(random_angle), Math.sin(random_angle)) => p.direction;
 
             now => p.spawn_time;
             pos => p.particle_mesh.pos;
@@ -321,7 +342,7 @@ while (true) {
         
         if (calculateOverallMagnitude() > amplitude_threshold) {
             // Spawn particles in the outer layer of the spiral
-            ps.spawnParticle(particle_pos, particle_color);
+            ps.spawnParticle(particle_pos, particle_color, smoothed_radius[highest_bin]);
         }
     }
     
