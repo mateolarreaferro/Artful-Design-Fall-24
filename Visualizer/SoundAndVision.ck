@@ -152,12 +152,12 @@ float smoothed_radius[max_bin - min_bin];
 // Particle system settings
 UI_Float3 particle_start_color(Color.SKYBLUE);
 UI_Float3 particle_end_color(Color.RED);
-1.0 => float particle_lifetime;
-0.2 => float amplitude_threshold; // Threshold for spawning particles
+0.75 => float particle_lifetime;
+0.15 => float amplitude_threshold; // Threshold for spawning particles
 
 //************************** PARTICLE SYSTEM **************************//
 CircleGeometry particle_geo;
-256 => int PARTICLE_POOL_SIZE;
+300 => int PARTICLE_POOL_SIZE;
 Particle particles[PARTICLE_POOL_SIZE];
 
 class Particle {
@@ -252,7 +252,7 @@ fun void getFFTData() {
     fft.upchuck();
     fft.spectrum(fft_response);
     for (min_bin => int i; i < max_bin; i++) {
-        20 * (fft_response[i] $ polar).mag => magnitudes[i - min_bin];
+        15 * (fft_response[i] $ polar).mag => magnitudes[i - min_bin];
     }
 }
 
@@ -397,25 +397,25 @@ while (true) {
     // Display UI controls for the visualizer
     if (UI.begin("Visualizer")) {
         UI.scenegraph(GG.scene());
-        if (UI.slider("Threshold", threshold, 0.0, 4.0)) {
-            bloom_pass.threshold(threshold.val());
-        }
-        if (UI.slider("Intensity", bloom_intensity, 0.0, 1.0)) {
-            bloom_pass.intensity(bloom_intensity.val());
-        }
-        if (UI.slider("Radius", radius, 0.0, 1.0)) {
-            bloom_pass.radius(radius.val());
-        }
-        if (UI.slider("Levels", levels, 0, 10)) {
-            bloom_pass.levels(levels.val());
-        }
-        UI.separator();
-        if (UI.listBox("Tonemap Function", tonemap, builtin_tonemap_algorithms, -1)) {
-            output_pass.tonemap(tonemap.val());
-        }
-        if (UI.slider("Exposure", exposure, 0, 4)) {
-            output_pass.exposure(exposure.val());
-        }
+        // if (UI.slider("Threshold", threshold, 0.0, 4.0)) {
+        //     bloom_pass.threshold(threshold.val());
+        // }
+        // if (UI.slider("Intensity", bloom_intensity, 0.0, 1.0)) {
+        //     bloom_pass.intensity(bloom_intensity.val());
+        // }
+        // if (UI.slider("Radius", radius, 0.0, 1.0)) {
+        //     bloom_pass.radius(radius.val());
+        // }
+        // if (UI.slider("Levels", levels, 0, 10)) {
+        //     bloom_pass.levels(levels.val());
+        // }
+        // UI.separator();
+        // if (UI.listBox("Tonemap Function", tonemap, builtin_tonemap_algorithms, -1)) {
+        //     output_pass.tonemap(tonemap.val());
+        // }
+        // if (UI.slider("Exposure", exposure, 0, 4)) {
+        //     output_pass.exposure(exposure.val());
+        // }
     }
     UI.end();
 }
