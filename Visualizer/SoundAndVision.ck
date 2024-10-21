@@ -336,7 +336,7 @@ fun void map2spiralSpectrogram(vec2 out[], vec3 color_out[]) {
 // Map audio samples to the waveform display
 fun void mapWaveform(float in_samples[], vec2 out_positions[]) {
     .5 => float y_scale;
-    0.2 => float x_spacing;
+    0.193 => float x_spacing;
     (WINDOW_SIZE / 2.0) * x_spacing => float x_offset;
     
     // Set 2D positions for rendering
