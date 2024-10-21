@@ -99,10 +99,9 @@ UI_Float bloom_intensity(bloom_pass.intensity());
 UI_Float radius(bloom_pass.radius());
 UI_Float threshold(bloom_pass.threshold());
 
-// Tonemapping settings
-[
-"NONE", "LINEAR", "REINHARD", "CINEON", "ACES", "UNCHARTED",
-] @=> string builtin_tonemap_algorithms[];
+// Tone Map
+output_pass.tonemap(4);  // Set the tonemap to ACES
+// Now create the UI_Int for interacting with it
 UI_Int tonemap(output_pass.tonemap());
 UI_Int levels(bloom_pass.levels());
 UI_Float exposure(output_pass.exposure());
