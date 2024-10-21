@@ -293,8 +293,10 @@ fun void map2spiralSpectrogram(vec2 out[], vec3 color_out[]) {
     
     // Calculate radius and scale for spiral
     smoothValue(base_spiral_radius, 2 + 0.2 * Math.cos(now / second * 0.5 * Math.PI), spiral_radius_smoothing_factor) => base_spiral_radius;
-     0.1 => float base_spiral_scale; // --> change to 0.5  // modulate from 0.1 to 0.5 in a sine (take like 30 seconds per cycle)
     
+    // Modulate base_spiral_scale from 0.1 to 0.5 in a 30-second sine wave cycle
+    (0.3 * Math.cos((now / second) * (Math.TWO_PI / 30.0)) + 0.4) => float base_spiral_scale;
+
     // Update spiral rotation time
     spiral_rotation_time + GG.dt() * 0.2 => spiral_rotation_time;
     Math.PI * spiral_rotation_time => float spiral_rotation_angle;
@@ -329,6 +331,7 @@ fun void map2spiralSpectrogram(vec2 out[], vec3 color_out[]) {
         }
     }
 }
+
 
 // Map audio samples to the waveform display
 fun void mapWaveform(float in_samples[], vec2 out_positions[]) {
