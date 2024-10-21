@@ -39,6 +39,13 @@ WINDOW_SIZE => accum.size;
 //************************** CHUGL SETTINGS **************************//
 // Visualizer window setup
 GWindow.title("Visualizer"); 
+
+// Renderers for waveform and spiral spectrogram
+GLines waveform_display --> GG.scene(); 
+waveform_display.width(0.5); 
+waveform_display.color(@(1.0, 1.0, 1.0)); 
+
+GLines spiral_spectrogram --> GG.scene();
 GCamera camera --> GG.scene(); 
 camera.perspective();
 GG.scene().camera().posZ(99); 
@@ -106,13 +113,6 @@ UI_Int tonemap(output_pass.tonemap());
 UI_Int levels(bloom_pass.levels());
 UI_Float exposure(output_pass.exposure());
 
-
-// Renderers for waveform and spiral spectrogram
-GLines waveform_display --> GG.scene(); 
-waveform_display.width(0.5); 
-waveform_display.color(@(1.0, 1.0, 1.0)); 
-
-GLines spiral_spectrogram --> GG.scene();
 
 //************************** VARIABLES **************************//
 // Arrays for audio samples, FFT data, and visual positions
@@ -293,7 +293,7 @@ fun void map2spiralSpectrogram(vec2 out[], vec3 color_out[]) {
     
     // Calculate radius and scale for spiral
     smoothValue(base_spiral_radius, 2 + 0.2 * Math.cos(now / second * 0.5 * Math.PI), spiral_radius_smoothing_factor) => base_spiral_radius;
-     0.1 => float base_spiral_scale;
+     0.1 => float base_spiral_scale; // --> change to 0.5  // modulate from 0.1 to 0.5 in a sine (take like 30 seconds per cycle)
     
     // Update spiral rotation time
     spiral_rotation_time + GG.dt() * 0.2 => spiral_rotation_time;
@@ -333,7 +333,7 @@ fun void map2spiralSpectrogram(vec2 out[], vec3 color_out[]) {
 // Map audio samples to the waveform display
 fun void mapWaveform(float in_samples[], vec2 out_positions[]) {
     .5 => float y_scale;
-    0.1 => float x_spacing;
+    0.2 => float x_spacing;
     (WINDOW_SIZE / 2.0) * x_spacing => float x_offset;
     
     // Set 2D positions for rendering
@@ -368,7 +368,7 @@ while (true) {
     spiral_spectrogram.colors(spiral_colors);
     
     // Adjust spiral width based on magnitude
-    0.2 * calculateOverallMagnitude() => spiral_spectrogram.width;
+    0.05 * calculateOverallMagnitude() => spiral_spectrogram.width; // 0.1 --> magic number
     
     // Get the highest frequency bin and color for particles
     getHighestFrequencyBin() => int highest_bin;
@@ -396,25 +396,6 @@ while (true) {
     // Display UI controls for the visualizer
     if (UI.begin("Visualizer")) {
         UI.scenegraph(GG.scene());
-        // if (UI.slider("Threshold", threshold, 0.0, 4.0)) {
-        //     bloom_pass.threshold(threshold.val());
-        // }
-        // if (UI.slider("Intensity", bloom_intensity, 0.0, 1.0)) {
-        //     bloom_pass.intensity(bloom_intensity.val());
-        // }
-        // if (UI.slider("Radius", radius, 0.0, 1.0)) {
-        //     bloom_pass.radius(radius.val());
-        // }
-        // if (UI.slider("Levels", levels, 0, 10)) {
-        //     bloom_pass.levels(levels.val());
-        // }
-        // UI.separator();
-        // if (UI.listBox("Tonemap Function", tonemap, builtin_tonemap_algorithms, -1)) {
-        //     output_pass.tonemap(tonemap.val());
-        // }
-        // if (UI.slider("Exposure", exposure, 0, 4)) {
-        //     output_pass.exposure(exposure.val());
-        // }
     }
     UI.end();
 }
