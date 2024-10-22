@@ -358,6 +358,7 @@ fun void doAudio() {
 spork ~ doAudio();
 
 //************************** MAIN GRAPHICAL LOOP **************************//
+//************************** MAIN GRAPHICAL LOOP **************************//
 while (true) {
     getFFTData();
     
@@ -370,9 +371,13 @@ while (true) {
     spiral_spectrogram.positions(spiral_positions);
     spiral_spectrogram.colors(spiral_colors);
     
-    // Adjust spiral width based on magnitude
-    0.05 * calculateOverallMagnitude() => spiral_spectrogram.width; // 0.1 --> magic number
+    // Dynamic modulation of spiral width from 0.01 to 0.07 in a minute
+    // Use sin wave to oscillate between 0.01 and 0.07 over a 60-second cycle
+    (0.03 * Math.cos((now / second) * (Math.TWO_PI / 40)) + 0.04) => float modulated_width;
     
+    // Adjust spiral width based on modulated value
+    modulated_width * calculateOverallMagnitude() => spiral_spectrogram.width;
+
     // Get the highest frequency bin and color for particles
     getHighestFrequencyBin() => int highest_bin;
     spectrumColorMap[highest_bin % numColors] => vec3 particle_color;
@@ -390,6 +395,9 @@ while (true) {
             ps.spawnParticle(particle_pos, particle_color, smoothed_radius[highest_bin]);
         }
     }
+
+    GG.nextFrame() => now;
+
     
     // Update particles
     ps.update(GG.dt());
