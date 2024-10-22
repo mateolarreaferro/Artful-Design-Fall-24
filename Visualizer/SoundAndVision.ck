@@ -32,13 +32,13 @@ WINDOW_SIZE => accum.size;
 // Create Delay UGen
 Delay delay => dac;          // Add delay before sending to DAC
 0.5::second => delay.max;    // Set maximum delay time
-0.25::second => delay.delay; // Set initial delay time (250 ms)
-0.5 => delay.gain;           // Control the volume of the delayed signal (50% feedback)
+0.5::second => delay.delay; // Set initial delay time (250 ms)
+0.7 => delay.gain;           // Control the volume of the delayed signal (50% feedback)
 input => delay;              // Route input through the delay
 
 //************************** REVERB EFFECT **************************//
 JCRev reverb => dac;         // Create a JCRev (reverb) UGen
-0.1 => reverb.mix;           // Set the wet/dry mix (how much reverb is mixed in)
+0.25 => reverb.mix;           // Set the wet/dry mix (how much reverb is mixed in)
 0.8 => reverb.gain;          // Adjust the reverb gain (how loud the reverb is)
 delay => reverb;             // Route the delayed signal through the reverb
 
@@ -51,7 +51,7 @@ GCamera camera --> GG.scene();
 camera.perspective();
 GG.scene().camera().posZ(90);
 GG.scene().camera().clip(1, 200);
-GG.fullscreen();
+//GG.fullscreen();
 
 GG.scene().camera().fov(45);
 GG.scene().camera().clip(1, 200);
@@ -71,9 +71,7 @@ UI_Int tonemap(output_pass.tonemap());
 UI_Int levels(bloom_pass.levels());
 UI_Float exposure(output_pass.exposure());
 
-GLines waveform_display --> GG.scene();
-waveform_display.width(0.8);
-waveform_display.color(@(1.0, 1.0, 1.0));
+
 
 //************************** VARIABLES **************************//
 // Setup arrays and variables for audio samples, FFT data, and visual positions
@@ -109,6 +107,10 @@ UI_Float3 particle_start_color(Color.SKYBLUE);
 UI_Float3 particle_end_color(Color.RED);
 0.75 => float particle_lifetime;
 0.15 => float amplitude_threshold;
+
+GLines waveform_display --> GG.scene();
+waveform_display.width(0.5);
+waveform_display.color(@(1.0, 1.0, 1.0));
 
 //************************** PARTICLE SYSTEM **************************//
 // Particle class definition and system instantiation
@@ -182,18 +184,18 @@ ParticleSystem ps;
 
 //************************** FRAME SETUP **************************//
 // Setup frames around the screen using planes attached to the camera
-30 => float frame_thickness;
-150 => float frame_size;
+10 => float frame_thickness;
+100 => float frame_size;
 
 GPlane westPlane --> camera;
--75.0 => westPlane.posX;
+-80.0 => westPlane.posX;
 frame_thickness => westPlane.scaX;
 frame_size => westPlane.scaY;
 0.1 => westPlane.scaZ;
 @(1.0, 1.0, 1.0) => westPlane.color;
 
 GPlane eastPlane --> camera;
-75.0 => eastPlane.posX;
+80.0 => eastPlane.posX;
 frame_thickness => eastPlane.scaX;
 frame_size => eastPlane.scaY;
 0.1 => eastPlane.scaZ;
@@ -201,17 +203,18 @@ frame_size => eastPlane.scaY;
 
 GPlane northPlane --> camera;
 50.0 => northPlane.posY;
-frame_size => northPlane.scaX;
+150 => northPlane.scaX;
 frame_thickness => northPlane.scaY;
 0.1 => northPlane.scaZ;
 @(1.0, 1.0, 1.0) => northPlane.color;
 
 GPlane southPlane --> camera;
 -50.0 => southPlane.posY;
-frame_size => southPlane.scaX;
+150 => southPlane.scaX;
 frame_thickness => southPlane.scaY;
 0.1 => southPlane.scaZ;
 @(1.0, 1.0, 1.0) => southPlane.color;
+
 
 //************************** FUNCTIONS **************************//
 // Interpolate between two colors
@@ -303,7 +306,7 @@ fun void map2spiralSpectrogram(vec2 out[], vec3 color_out[]) {
 // Map audio samples to waveform positions
 fun void mapWaveform(float in_samples[], vec2 out_positions[]) {
     .5 => float y_scale;
-    0.193 => float x_spacing;
+    0.2 => float x_spacing;
     (WINDOW_SIZE / 2.0) * x_spacing => float x_offset;
 
     for (0 => int i; i < WINDOW_SIZE; i++) {
