@@ -50,6 +50,7 @@ GCamera camera --> GG.scene();
 camera.perspective();
 GG.scene().camera().posZ(99); 
 GG.scene().camera().clip(1, 200);
+GG.fullscreen();
 
 // Create a thicker frame using planes attached to the camera, positioned at the screen's perimeter
 
