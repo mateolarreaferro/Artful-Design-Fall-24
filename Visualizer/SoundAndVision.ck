@@ -40,55 +40,52 @@ WINDOW_SIZE => accum.size;
 // Visualizer window setup
 GWindow.title("Visualizer"); 
 
-// Renderers for waveform and spiral spectrogram
-GLines waveform_display --> GG.scene(); 
-waveform_display.width(0.5); 
-waveform_display.color(@(1.0, 1.0, 1.0)); 
 
 GLines spiral_spectrogram --> GG.scene();
 GCamera camera --> GG.scene(); 
 camera.perspective();
-GG.scene().camera().posZ(99); 
+GG.scene().camera().posZ(90); 
 GG.scene().camera().clip(1, 200);
 GG.fullscreen();
 
 // Create a thicker frame using planes attached to the camera, positioned at the screen's perimeter
 
-// Adjust these values to better match the screen size and the desired frame thickness
-15 => float frame_thickness;  // Thickness of the frame
-10 => float frame_offset;      // Offset of the frame planes from the center
+// Updated frame thickness and position adjustments
+30 => float frame_thickness;  // Uniform frame thickness for all planes
+150 => float frame_size;      // Uniform size for the width and height
 
 // West plane (left side)
 GPlane westPlane --> camera;
--75.0 => westPlane.posX;           // Adjust to push to the left side of the screen
-frame_thickness => westPlane.scaX; // Adjust width of the plane (thicker)
-150.0 => westPlane.scaY;           // Height of the frame
-0.1 => westPlane.scaZ;             // Thin depth to keep it 2D
+-75.0 => westPlane.posX;           // Push to the left side of the screen
+frame_thickness => westPlane.scaX; // Use frame_thickness
+frame_size => westPlane.scaY;      // Uniform height
+0.1 => westPlane.scaZ;             // Thin depth
 @(1.0, 1.0, 1.0) => westPlane.color; // White color
 
 // East plane (right side)
 GPlane eastPlane --> camera;
-75.0 => eastPlane.posX;             // Push to the right side of the screen
-frame_thickness => eastPlane.scaX;  // Adjust width of the plane (thicker)
-150.0 => eastPlane.scaY;            // Height of the frame
-0.1 => eastPlane.scaZ;              // Thin depth
+75.0 => eastPlane.posX;            // Push to the right side of the screen
+frame_thickness => eastPlane.scaX; // Use frame_thickness
+frame_size => eastPlane.scaY;      // Uniform height
+0.1 => eastPlane.scaZ;             // Thin depth
 @(1.0, 1.0, 1.0) => eastPlane.color; // White color
 
 // North plane (top)
 GPlane northPlane --> camera;
-50.0 => northPlane.posY;             // Move to the top of the screen
-150.0 => northPlane.scaX;            // Width to cover the screen
-frame_thickness => northPlane.scaY;  // Thicker height for the frame
-0.1 => northPlane.scaZ;              // Thin depth
+50.0 => northPlane.posY;            // Move to the top of the screen
+frame_size => northPlane.scaX;      // Uniform width
+frame_thickness => northPlane.scaY; // Use frame_thickness
+0.1 => northPlane.scaZ;             // Thin depth
 @(1.0, 1.0, 1.0) => northPlane.color; // White color
 
 // South plane (bottom)
 GPlane southPlane --> camera;
--50.0 => southPlane.posY;            // Move to the bottom of the screen
-150.0 => southPlane.scaX;            // Width to cover the screen
-frame_thickness => southPlane.scaY;  // Thicker height for the frame
-0.1 => southPlane.scaZ;              // Thin depth
+-50.0 => southPlane.posY;           // Move to the bottom of the screen
+frame_size => southPlane.scaX;      // Uniform width
+frame_thickness => southPlane.scaY; // Use frame_thickness
+0.1 => southPlane.scaZ;             // Thin depth
 @(1.0, 1.0, 1.0) => southPlane.color; // White color
+
 
 // Adjust the camera field of view and ensure it's correctly positioned
 GG.scene().camera().fov(45);  // Field of view adjustment if needed
@@ -113,6 +110,11 @@ output_pass.tonemap(4);  // Set the tonemap to ACES
 UI_Int tonemap(output_pass.tonemap());
 UI_Int levels(bloom_pass.levels());
 UI_Float exposure(output_pass.exposure());
+
+// Renderers for waveform and spiral spectrogram
+GLines waveform_display --> GG.scene(); 
+waveform_display.width(0.8); 
+waveform_display.color(@(1.0, 1.0, 1.0)); 
 
 
 //************************** VARIABLES **************************//
