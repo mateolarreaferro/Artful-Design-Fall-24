@@ -28,6 +28,14 @@ WINDOW_SIZE => accum.size;
 (MIN_FREQ / SAMPLING_RATE * FFT_SIZE) $ int => int min_bin;
 (MAX_FREQ / SAMPLING_RATE * FFT_SIZE) $ int => int max_bin;
 
+//************************** DELAY EFFECT **************************//
+// Create Delay UGen
+Delay delay => dac;          // Add delay before sending to DAC
+0.5::second => delay.max;    // Set maximum delay time
+0.25::second => delay.delay; // Set initial delay time (250 ms)
+0.5 => delay.gain;           // Control the volume of the delayed signal (50% feedback)
+input => delay;              // Route input through the delay
+
 //************************** CHUGL SETTINGS **************************//
 // Setup visualizer window, camera, and post-processing effects
 GWindow.title("Visualizer");
