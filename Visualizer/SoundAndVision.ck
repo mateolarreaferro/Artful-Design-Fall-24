@@ -36,6 +36,13 @@ Delay delay => dac;          // Add delay before sending to DAC
 0.5 => delay.gain;           // Control the volume of the delayed signal (50% feedback)
 input => delay;              // Route input through the delay
 
+//************************** REVERB EFFECT **************************//
+JCRev reverb => dac;         // Create a JCRev (reverb) UGen
+0.1 => reverb.mix;           // Set the wet/dry mix (how much reverb is mixed in)
+0.8 => reverb.gain;          // Adjust the reverb gain (how loud the reverb is)
+delay => reverb;             // Route the delayed signal through the reverb
+
+
 //************************** CHUGL SETTINGS **************************//
 // Setup visualizer window, camera, and post-processing effects
 GWindow.title("Visualizer");
