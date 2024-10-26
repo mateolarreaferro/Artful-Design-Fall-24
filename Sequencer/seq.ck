@@ -13,12 +13,16 @@ CircleGeometry particle_geo;
 now => time last_spawn_time;
 
 // Create a centered circle in the middle of the screen
+3 => float circle_radius; // Circle radius
+vec3 circle_center; // Circle center position
+circle_center.set(0.0, 0.0, 0.0); // Initialize components
+
 CircleGeometry center_circle_geo;
 FlatMaterial center_circle_material;
 GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene();
 
 // Build the circle geometry using the correct parameters
-center_circle_geo.build(3, 32, 0.0, 2 * Math.PI); // radius, segments, thetaStart, thetaLength
+center_circle_geo.build(circle_radius, 32, 0.0, 2 * Math.PI); // radius, segments, thetaStart, thetaLength
 
 // Set the material color (white color)
 Color.WHITE => center_circle_material.color;
@@ -41,16 +45,19 @@ Particle particles[PARTICLE_POOL_SIZE];
 
 // Sphere class definition
 class Sphere {
-    GSphere @ sphere_mesh; // Sphere's visual mesh (reference)
+    GSphere @ sphere_mesh;
     vec3 position;
+    float scale;
+    int shrinking;
 
     // Initialize a Sphere
     fun void init(vec3 pos) {
-        new GSphere @=> sphere_mesh; // Allocate a new GSphere and assign it to the reference
+        new GSphere @=> sphere_mesh;
         sphere_mesh --> GG.scene();
-        0.15 => sphere_mesh.sca;
+        0.15 => scale => sphere_mesh.sca;
         pos => position;
         pos => sphere_mesh.pos;
+        0 => shrinking;
     }
 }
 
@@ -119,12 +126,41 @@ class ParticleSystem {
         for (0 => int i; i < spheres.size(); i++) {
             spheres[i] @=> Sphere @ s;
 
-            // Apply a small random movement to simulate Brownian motion
-            Math.random2f(-0.02, 0.02) +=> s.position.x;
-            Math.random2f(-0.02, 0.02) +=> s.position.y;
+            // Apply Brownian motion if not shrinking
+            if (s.shrinking == 0) {
+                s.position.x + Math.random2f(-0.02, 0.02) => s.position.x;
+                s.position.y + Math.random2f(-0.02, 0.02) => s.position.y;
+            }
 
             // Update the sphere's position
             s.position => s.sphere_mesh.pos;
+
+            // Calculate distance from the center
+            Math.sqrt(Math.pow(s.position.x - circle_center.x, 2) + Math.pow(s.position.y - circle_center.y, 2)) => float distance;
+
+            // Check if the sphere is outside the circle
+            if (distance > circle_radius && s.shrinking == 0) {
+                1 => s.shrinking; // Start shrinking
+            }
+
+            // Handle shrinking
+            if (s.shrinking == 1) {
+                // Reduce the scale over time
+                s.scale - (dt * 0.05) => s.scale; // Adjust the shrinking speed as needed
+                if (s.scale <= 0) {
+                    0 => s.scale;
+                    s.scale => s.sphere_mesh.sca;
+                    // Detach the sphere from the scene graph
+                    s.sphere_mesh.detach();
+                    // Nullify the sphere's mesh reference
+                    null @=> s.sphere_mesh;
+                    // Remove the sphere from the array
+                    spheres.erase(i);
+                    i--; // Adjust the index after removal
+                    continue;
+                }
+                s.scale => s.sphere_mesh.sca;
+            }
         }
     }
 }
