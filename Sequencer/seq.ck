@@ -9,11 +9,21 @@ UI_Float lifetime(1.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
 CircleGeometry particle_geo;
 
+0.5::second => dur cooldown_duration;
+now => time last_spawn_time;
+
 Gain main_gain(1) => dac;
 
-// Cooldown time for sphere spawning
-0.25::second => dur cooldown_duration;
-now => time last_spawn_time;
+// Create a centered circle in the middle of the screen
+CircleGeometry center_circle_geo;
+FlatMaterial center_circle_material;
+GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene();
+
+// Build the circle geometry using the correct parameters
+center_circle_geo.build(3, 32, 0.0, 2 * Math.PI); // radius, segments, thetaStart, thetaLength
+
+// Set the material color using RGB values (cyan color)
+Color.WHITE => center_circle_material.color; // RGB for cyan
 
 class Particle {
     // set up particle mesh
@@ -70,7 +80,7 @@ class ParticleSystem {
             particles[num_active] @=> Particle p;
 
             // map color 
-            Math.random2f(0.1, 1.0) => float color_factor;
+            .5 => float color_factor;
             start_color.val() + (end_color.val() - start_color.val()) * color_factor => p.particle_mat.color;
             p.particle_mat.color() => p.color;
 
@@ -85,12 +95,12 @@ class ParticleSystem {
     }
 }
 
+// Initialize and display the particle system
 ParticleSystem ps;
 while (true) {
     GG.nextFrame() => now;
 
     if (GWindow.mouseLeft()) {
-        // Check if enough time has passed since the last spawn
         if (now - last_spawn_time >= cooldown_duration) {
             // Get the mouse position and convert to world coordinates
             GWindow.mousePos() => vec2 currentPos;
@@ -101,8 +111,8 @@ while (true) {
 
             // Create the sphere at the clicked location
             GSphere sph --> GG.scene();
-            .5 => sph.sca;
-            worldPos => sph.pos; // Set the sphere's position
+            .15 => sph.sca;
+            worldPos => sph.pos; // Set the sphere's position 
 
             // Update the last spawn time
             now => last_spawn_time;
