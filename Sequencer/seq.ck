@@ -8,11 +8,8 @@ UI_Float3 start_color(Color.SKYBLUE);
 UI_Float3 end_color(Color.DARKPURPLE);
 UI_Float lifetime(1.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
-
 CircleGeometry particle_geo;
 
-// pitch bank
-//36, 48] @=> int pitches[];
 Gain main_gain(1) => dac;
 
 class Particle {
@@ -52,9 +49,7 @@ class ParticleSystem {
             // update particle
             {
                 // update size (based on midi)
-                // Std.ftom(p.osc.freq()) => float midi;
-                //Math.remap(midi, 36, 48, 1, .1) => float size_factor;
-                .5 => float size_factor;
+                Math.random2f(0.1, 1.0) => float size_factor;
                 Math.pow((now - p.spawn_time) / lifetime.val()::second, .5) => float t;
                 size_factor * (1 - t) => p.particle_mesh.sca;
 
@@ -71,11 +66,6 @@ class ParticleSystem {
     fun void spawnParticle(vec3 pos) {
         if (num_active < PARTICLE_POOL_SIZE) {
             particles[num_active] @=> Particle p;
-            
-            // audio mapping
-            // pitches[Math.random2(0, pitches.size()-1)] + 12 => int midi;
-            // Std.mtof(midi) => p.osc.freq;
-            // p.env.keyOn();
 
             // map color 
             .5 => float color_factor;
