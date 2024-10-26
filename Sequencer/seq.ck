@@ -12,8 +12,9 @@ UI_Float3 background_color(GG.scene().backgroundColor());
 CircleGeometry particle_geo;
 
 // pitch bank
-[36, 48] @=> int pitches[];
+//36, 48] @=> int pitches[];
 Gain main_gain(1) => dac;
+
 class Particle {
     // set up particle mesh
     FlatMaterial particle_mat;
@@ -24,17 +25,9 @@ class Particle {
     @(0,1) => vec2 direction; // random direction
     time spawn_time;
     Color.WHITE => vec3 color;
-
-    // particle audio
-    SinOsc osc => ADSR env => main_gain;
-    .02 => osc.gain;
-    5::ms => env.attackTime;
-    100::ms => env.decayTime;
-    .1 => env.sustainLevel;
-    1::second => env.releaseTime;
 }
 
-256 => int PARTICLE_POOL_SIZE;
+512 => int PARTICLE_POOL_SIZE;
 Particle particles[PARTICLE_POOL_SIZE];
 
 class ParticleSystem {
@@ -52,15 +45,16 @@ class ParticleSystem {
                 particles[num_active] @=> particles[i];
                 p @=> particles[num_active];
                 i--;
-                p.env.keyOff();
+                //p.env.keyOff();
                 continue;
             }
 
             // update particle
             {
                 // update size (based on midi)
-                Std.ftom(p.osc.freq()) => float midi;
-                Math.remap(midi, 36, 48, 1, .1) => float size_factor;
+                // Std.ftom(p.osc.freq()) => float midi;
+                //Math.remap(midi, 36, 48, 1, .1) => float size_factor;
+                .5 => float size_factor;
                 Math.pow((now - p.spawn_time) / lifetime.val()::second, .5) => float t;
                 size_factor * (1 - t) => p.particle_mesh.sca;
 
@@ -79,12 +73,12 @@ class ParticleSystem {
             particles[num_active] @=> Particle p;
             
             // audio mapping
-            pitches[Math.random2(0, pitches.size()-1)] + 12 => int midi;
-            Std.mtof(midi) => p.osc.freq;
-            p.env.keyOn();
+            // pitches[Math.random2(0, pitches.size()-1)] + 12 => int midi;
+            // Std.mtof(midi) => p.osc.freq;
+            // p.env.keyOn();
 
             // map color 
-            Math.remap(midi, 36, 48, 1, .3) => float color_factor;
+            .5 => float color_factor;
             start_color.val() + (end_color.val() - start_color.val()) * color_factor => p.particle_mat.color;
             p.particle_mat.color() => p.color;
 
