@@ -1,7 +1,6 @@
-
 // scene setup
 GG.camera().orthographic();
-0 * Color.DARKBLUE => GG.scene().backgroundColor;
+0.3 * Color.WHITE => GG.scene().backgroundColor;
 
 // particle system parameters
 UI_Float3 start_color(Color.SKYBLUE);
@@ -12,6 +11,10 @@ CircleGeometry particle_geo;
 
 Gain main_gain(1) => dac;
 
+// Cooldown time for sphere spawning
+0.25::second => dur cooldown_duration;
+now => time last_spawn_time;
+
 class Particle {
     // set up particle mesh
     FlatMaterial particle_mat;
@@ -19,12 +22,12 @@ class Particle {
     0 => particle_mesh.sca;
 
     // particle properties
-    @(0,1) => vec2 direction; // random direction
+    @(0,10) => vec2 direction; // random direction
     time spawn_time;
     Color.WHITE => vec3 color;
 }
 
-512 => int PARTICLE_POOL_SIZE;
+128 => int PARTICLE_POOL_SIZE;
 Particle particles[PARTICLE_POOL_SIZE];
 
 class ParticleSystem {
@@ -42,13 +45,12 @@ class ParticleSystem {
                 particles[num_active] @=> particles[i];
                 p @=> particles[num_active];
                 i--;
-                //p.env.keyOff();
                 continue;
             }
 
             // update particle
             {
-                // update size (based on midi)
+                // update size
                 Math.random2f(0.1, 1.0) => float size_factor;
                 Math.pow((now - p.spawn_time) / lifetime.val()::second, .5) => float t;
                 size_factor * (1 - t) => p.particle_mesh.sca;
@@ -68,7 +70,7 @@ class ParticleSystem {
             particles[num_active] @=> Particle p;
 
             // map color 
-            .5 => float color_factor;
+            Math.random2f(0.1, 1.0) => float color_factor;
             start_color.val() + (end_color.val() - start_color.val()) * color_factor => p.particle_mat.color;
             p.particle_mat.color() => p.color;
 
@@ -88,19 +90,24 @@ while (true) {
     GG.nextFrame() => now;
 
     if (GWindow.mouseLeft()) {
-    // Get the mouse position and convert to world coordinates
-    GWindow.mousePos() => vec2 currentPos;
-    GG.camera().screenCoordToWorldPos(currentPos, 2.0) => vec3 worldPos;
+        // Check if enough time has passed since the last spawn
+        if (now - last_spawn_time >= cooldown_duration) {
+            // Get the mouse position and convert to world coordinates
+            GWindow.mousePos() => vec2 currentPos;
+            GG.camera().screenCoordToWorldPos(currentPos, 2.0) => vec3 worldPos;
 
-    // Spawn a particle at the mouse position
-    ps.spawnParticle(worldPos);
+            // Spawn a particle at the mouse position
+            ps.spawnParticle(worldPos);
 
-    // Create the sphere at the clicked location
-    GSphere sph --> GG.scene();
-    .3 => sph.sca;
-    worldPos => sph.pos; // Set the sphere's position 
+            // Create the sphere at the clicked location
+            GSphere sph --> GG.scene();
+            .5 => sph.sca;
+            worldPos => sph.pos; // Set the sphere's position
+
+            // Update the last spawn time
+            now => last_spawn_time;
+        }
     }
 
     ps.update(GG.dt());
-    
 }
