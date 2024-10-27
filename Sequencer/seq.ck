@@ -15,6 +15,7 @@ output_pass.input(bloom_pass.colorOutput());
 // Particle system parameters
 UI_Float3 start_color(@(1.0, 0.063, 0.122)); // Start color: Red
 UI_Float3 end_color(@(1.0, 0.063, 0.122));   // End color: Red (same color)
+UI_Float3 collision_color(@(0.0, 1.0, 0.0)); // Collision-triggered color: Green
 UI_Float lifetime(2.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
 CircleGeometry particle_geo;
@@ -154,15 +155,13 @@ class ParticleSystem {
         }
     }
 
-    // Spawn a new particle
-    fun void spawnParticle(vec3 pos) {
+    // Spawn a new particle with a specified color
+    fun void spawnParticle(vec3 pos, vec3 color) {
         if (num_active < PARTICLE_POOL_SIZE) {
             particles[num_active] @=> Particle p;
 
-            // Set initial color
-            0.5 => float color_factor;
-            start_color.val() + (end_color.val() - start_color.val()) * color_factor => p.particle_mat.color;
-            p.particle_mat.color() => p.color;
+            color => p.particle_mat.color;
+            color => p.color;
 
             // Set random direction
             Math.random2f(0, 2 * Math.PI) => float random_angle;
@@ -187,14 +186,14 @@ class ParticleSystem {
                 // Calculate distance between the centers of the spheres
                 Math.sqrt(Math.pow(s1.position.x - s2.position.x, 2) + Math.pow(s1.position.y - s2.position.y, 2)) => float distance;
                 
-                // Check if spheres are colliding
-                if (distance <= (s1.scale + s2.scale)) {
-                    // Spawn particles at the midpoint of the colliding spheres
+                // Make collision detection stricter (require closer distance)
+                if (distance <= (s1.scale + s2.scale) * 0.8) { // Adjusted threshold to be stricter
+                    // Spawn collision-triggered particles at the midpoint of the colliding spheres
                     vec3 collision_pos;
                     (s1.position + s2.position) / 2 => collision_pos;
 
                     for (0 => int k; k < 10; k++) {
-                        spawnParticle(collision_pos);
+                        spawnParticle(collision_pos, collision_color.val()); // Use collision color
                     }
                 }
             }
@@ -273,7 +272,7 @@ while (true) {
 
             // Spawn 5 particles at the mouse position
             for (0 => int j; j < 5; j++) {
-                ps.spawnParticle(worldPos);
+                ps.spawnParticle(worldPos, start_color.val());
             }
 
             // Create a new Sphere instance with Brownian motion
