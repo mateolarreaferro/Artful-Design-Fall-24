@@ -1,10 +1,20 @@
 // Scene setup
 GG.camera().orthographic();
-@(0.847, 0.788, 0.608) => GG.scene().backgroundColor; // Ecru background
+@(1.0, 0.063, 0.122) => GG.scene().backgroundColor; // Red background
+
+// Bloom effect setup
+GG.outputPass() @=> OutputPass output_pass;
+GG.renderPass() --> BloomPass bloom_pass --> output_pass;
+bloom_pass.input(GG.renderPass().colorOutput());
+output_pass.input(bloom_pass.colorOutput());
+
+4.0 => bloom_pass.intensity; // Bloom intensity
+0.5 => bloom_pass.radius;    // Bloom radius
+0.8 => bloom_pass.threshold; // Bloom threshold
 
 // Particle system parameters
-UI_Float3 start_color(@(0.643, 0.141, 0.231)); // Start color: Amaranth Purple
-UI_Float3 end_color(@(0.847, 0.592, 0.235));   // End color: Butterscotch
+UI_Float3 start_color(@(1.0, 0.063, 0.122)); // Start color: Red
+UI_Float3 end_color(@(1.0, 0.063, 0.122));   // End color: Red (same color)
 UI_Float lifetime(1.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
 CircleGeometry particle_geo;
@@ -24,15 +34,15 @@ GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene
 // Build the circle geometry using the correct parameters
 center_circle_geo.build(circle_radius, 32, 0.0, 2 * Math.PI); // radius, segments, thetaStart, thetaLength
 
-// Set the material color to Alloy Orange (converted to RGB)
-@(0.741, 0.388, 0.184) => center_circle_material.color;
+// Set the material color for the circle to make it more visible (e.g., a light gray)
+@(0.8, 0.8, 0.8) => center_circle_material.color;
 
 // Particle class definition
 class Particle {
     // Set up particle mesh
     FlatMaterial particle_mat;
     GMesh particle_mesh(particle_geo, particle_mat) --> GG.scene();
-    0 => particle_mesh.sca;
+    0.1 => particle_mesh.sca; // Ensure particles are visible initially
 
     // Particle properties
     vec2 direction;
@@ -69,11 +79,11 @@ class Sphere {
         pos => target_position; // Initial target position is the same
         0 => shrinking;
 
-        // Randomly assign color between Amaranth Purple and Butterscotch
+        // Randomly assign color between Lapis Lazuli and Hunyadi Yellow
         if (Math.random2f(0, 1) < 0.5) {
-            @(0.643, 0.141, 0.231) => sphere_mesh.color; // Amaranth Purple
+            sphere_mesh.color(@(0.2, 0.396, 0.541)); // Lapis Lazuli
         } else {
-            @(0.847, 0.592, 0.235) => sphere_mesh.color; // Butterscotch
+            sphere_mesh.color(@(0.965, 0.682, 0.176)); // Hunyadi Yellow
         }
     }
 }
