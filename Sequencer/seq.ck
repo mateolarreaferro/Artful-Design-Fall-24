@@ -23,7 +23,12 @@ CircleGeometry particle_geo;
 now => time last_spawn_time;
 
 // Create a centered circle in the middle of the screen
-3 => float circle_radius; // Circle radius
+3 => float base_circle_size;    // Base size of the circle (initial size)
+base_circle_size => float current_circle_size;  // Current size to track
+0.3 * base_circle_size => float min_circle_size; // 40% smaller target size
+0.0 => float sin_time;  // Time variable for the sine function
+0.12 => float sin_speed; // Speed of the sine function change
+
 vec3 circle_center; // Circle center position
 circle_center.set(0.0, 0.0, 0.0); // Initialize components
 
@@ -32,7 +37,7 @@ FlatMaterial center_circle_material;
 GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene();
 
 // Build the circle geometry using the correct parameters
-center_circle_geo.build(circle_radius, 32, 0.0, 2 * Math.PI); // radius, segments, thetaStart, thetaLength
+center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI); // radius, segments, thetaStart, thetaLength
 
 // Set the material color for the circle to make it more visible (e.g., a light gray)
 @(0.8, 0.8, 0.8) => center_circle_material.color;
@@ -94,6 +99,12 @@ Sphere @ spheres[0]; // Initialized as an empty array
 // ParticleSystem class definition
 class ParticleSystem {
     0 => int num_active;
+    float circle_size; // Track current circle size
+
+    // Constructor to initialize with the current circle size
+    fun void init(float currentSize) {
+        currentSize => circle_size;
+    }
 
     // Update particles
     fun void update(float dt) {
@@ -171,7 +182,7 @@ class ParticleSystem {
             Math.sqrt(Math.pow(s.position.x - circle_center.x, 2) + Math.pow(s.position.y - circle_center.y, 2)) => float distance;
 
             // Check if the sphere is outside the circle
-            if (distance > circle_radius && s.shrinking == 0) {
+            if (distance > circle_size && s.shrinking == 0) {
                 1 => s.shrinking; // Start shrinking
             }
 
@@ -197,8 +208,23 @@ class ParticleSystem {
     }
 }
 
-// Initialize the particle system
+// Initialize the particle system with the current circle size
 ParticleSystem ps;
+ps.init(current_circle_size);
+
+// Function to smoothly adjust the circle size using a sine function
+fun void updateCircleSize() {
+    sin_time + (sin_speed * GG.dt()) => sin_time;
+    
+    // Calculate the new circle size based on the sine function
+    base_circle_size - ((base_circle_size - min_circle_size) / 2) * (1 + Math.cos(sin_time)) => current_circle_size;
+
+    // Update ParticleSystem with the new circle size
+    current_circle_size => ps.circle_size;
+
+    // Rebuild the circle geometry with the new size
+    center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI);
+}
 
 // Main loop
 while (true) {
@@ -229,4 +255,7 @@ while (true) {
     // Update particle system and Brownian motion for spheres
     ps.update(GG.dt());
     ps.updateSpheres(GG.dt());
+
+    // Update the circle size
+    updateCircleSize();
 }
