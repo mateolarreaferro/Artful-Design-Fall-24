@@ -1,6 +1,6 @@
 // Scene setup
 GG.camera().orthographic();
-0.3 * Color.WHITE => GG.scene().backgroundColor;
+0 * Color.WHITE => GG.scene().backgroundColor;
 
 // Particle system parameters
 UI_Float3 start_color(Color.SKYBLUE);
@@ -9,7 +9,7 @@ UI_Float lifetime(1.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
 CircleGeometry particle_geo;
 
-0.5::second => dur cooldown_duration;
+0.25::second => dur cooldown_duration;
 now => time last_spawn_time;
 
 // Create a centered circle in the middle of the screen
@@ -43,10 +43,19 @@ class Particle {
 128 => int PARTICLE_POOL_SIZE;
 Particle particles[PARTICLE_POOL_SIZE];
 
+// Ease-in-out cubic function
+fun float easeInOutCubic(float t) {
+    return (t < 0.5) ? (4 * t * t * t) : (1 - Math.pow(-2 * t + 2, 3) / 2);
+}
+
+// Global speed factor to control movement speed of all spheres
+10 => float speedFactor;
+
 // Sphere class definition
 class Sphere {
     GSphere @ sphere_mesh;
     vec3 position;
+    vec3 target_position;
     float scale;
     int shrinking;
 
@@ -54,9 +63,10 @@ class Sphere {
     fun void init(vec3 pos) {
         new GSphere @=> sphere_mesh;
         sphere_mesh --> GG.scene();
-        0.15 => scale => sphere_mesh.sca;
+        0.25 => scale => sphere_mesh.sca;
         pos => position;
         pos => sphere_mesh.pos;
+        pos => target_position; // Initial target position is the same
         0 => shrinking;
     }
 }
@@ -93,9 +103,9 @@ class ParticleSystem {
                 // Update color
                 p.color + (end_color.val() - p.color) * t => p.particle_mat.color;
 
-                // Update position using translateX and translateY
-                (dt * p.direction).x => p.particle_mesh.translateX;
-                (dt * p.direction).y => p.particle_mesh.translateY;
+                // Update position using translateX and translateY smoothly
+                (dt * p.direction).x * 0.5 => p.particle_mesh.translateX;
+                (dt * p.direction).y * 0.5 => p.particle_mesh.translateY;
             }
         }
     }
@@ -121,16 +131,21 @@ class ParticleSystem {
         }
     }
 
-    // Update the Brownian motion for spheres
+    // Update the Brownian motion for spheres with easing
     fun void updateSpheres(float dt) {
         for (0 => int i; i < spheres.size(); i++) {
             spheres[i] @=> Sphere @ s;
 
-            // Apply Brownian motion if not shrinking
+            // Update the sphere's target position with a smaller, smoother change
             if (s.shrinking == 0) {
-                s.position.x + Math.random2f(-0.02, 0.02) => s.position.x;
-                s.position.y + Math.random2f(-0.02, 0.02) => s.position.y;
+                s.target_position.x + Math.random2f(-0.01, 0.01) => s.target_position.x;
+                s.target_position.y + Math.random2f(-0.01, 0.01) => s.target_position.y;
             }
+
+            // Use easing function for smoother transition and apply global speed factor
+            easeInOutCubic(0.1) => float ease_factor;
+            ease_factor * (s.target_position.x - s.position.x) * speedFactor + s.position.x => s.position.x;
+            ease_factor * (s.target_position.y - s.position.y) * speedFactor + s.position.y => s.position.y;
 
             // Update the sphere's position
             s.position => s.sphere_mesh.pos;
