@@ -175,50 +175,69 @@ class ParticleSystem {
         }
     }
 
-    // Update the Brownian motion for spheres with easing
+    // Update the Brownian motion for spheres with easing and detect collisions
     fun void updateSpheres(float dt) {
+        // Collision detection
         for (0 => int i; i < spheres.size(); i++) {
-            spheres[i] @=> Sphere @ s;
+            spheres[i] @=> Sphere @ s1;
+            
+            for (i + 1 => int j; j < spheres.size(); j++) {
+                spheres[j] @=> Sphere @ s2;
+
+                // Calculate distance between the centers of the spheres
+                Math.sqrt(Math.pow(s1.position.x - s2.position.x, 2) + Math.pow(s1.position.y - s2.position.y, 2)) => float distance;
+                
+                // Check if spheres are colliding
+                if (distance <= (s1.scale + s2.scale)) {
+                    // Spawn particles at the midpoint of the colliding spheres
+                    vec3 collision_pos;
+                    (s1.position + s2.position) / 2 => collision_pos;
+
+                    for (0 => int k; k < 10; k++) {
+                        spawnParticle(collision_pos);
+                    }
+                }
+            }
 
             // Update the sphere's target position with a smaller, smoother change
-            if (s.shrinking == 0) {
-                s.target_position.x + Math.random2f(-0.01, 0.01) => s.target_position.x;
-                s.target_position.y + Math.random2f(-0.01, 0.01) => s.target_position.y;
+            if (s1.shrinking == 0) {
+                s1.target_position.x + Math.random2f(-0.01, 0.01) => s1.target_position.x;
+                s1.target_position.y + Math.random2f(-0.01, 0.01) => s1.target_position.y;
             }
 
             // Use easing function for smoother transition and apply global speed factor
             easeInOutCubic(0.1) => float ease_factor;
-            ease_factor * (s.target_position.x - s.position.x) * speedFactor + s.position.x => s.position.x;
-            ease_factor * (s.target_position.y - s.position.y) * speedFactor + s.position.y => s.position.y;
+            ease_factor * (s1.target_position.x - s1.position.x) * speedFactor + s1.position.x => s1.position.x;
+            ease_factor * (s1.target_position.y - s1.position.y) * speedFactor + s1.position.y => s1.position.y;
 
             // Update the sphere's position
-            s.position => s.sphere_mesh.pos;
+            s1.position => s1.sphere_mesh.pos;
 
             // Calculate distance from the center
-            Math.sqrt(Math.pow(s.position.x - circle_center.x, 2) + Math.pow(s.position.y - circle_center.y, 2)) => float distance;
+            Math.sqrt(Math.pow(s1.position.x - circle_center.x, 2) + Math.pow(s1.position.y - circle_center.y, 2)) => float distanceFromCenter;
 
             // Check if the sphere is outside the circle
-            if (distance > circle_size && s.shrinking == 0) {
-                1 => s.shrinking; // Start shrinking
+            if (distanceFromCenter > circle_size && s1.shrinking == 0) {
+                1 => s1.shrinking; // Start shrinking
             }
 
             // Handle shrinking
-            if (s.shrinking == 1) {
+            if (s1.shrinking == 1) {
                 // Reduce the scale over time
-                s.scale - (dt * 0.05) => s.scale; // Adjust the shrinking speed as needed
-                if (s.scale <= 0) {
-                    0 => s.scale;
-                    s.scale => s.sphere_mesh.sca;
+                s1.scale - (dt * 0.05) => s1.scale; // Adjust the shrinking speed as needed
+                if (s1.scale <= 0) {
+                    0 => s1.scale;
+                    s1.scale => s1.sphere_mesh.sca;
                     // Detach the sphere from the scene graph
-                    s.sphere_mesh.detach();
+                    s1.sphere_mesh.detach();
                     // Nullify the sphere's mesh reference
-                    null @=> s.sphere_mesh;
+                    null @=> s1.sphere_mesh;
                     // Remove the sphere from the array
                     spheres.erase(i);
                     i--; // Adjust the index after removal
                     continue;
                 }
-                s.scale => s.sphere_mesh.sca;
+                s1.scale => s1.sphere_mesh.sca;
             }
         }
     }
