@@ -1,10 +1,10 @@
 // Scene setup
 GG.camera().orthographic();
-0 * Color.WHITE => GG.scene().backgroundColor;
+@(0.847, 0.788, 0.608) => GG.scene().backgroundColor; // Ecru background
 
 // Particle system parameters
-UI_Float3 start_color(Color.SKYBLUE);
-UI_Float3 end_color(Color.DARKPURPLE);
+UI_Float3 start_color(@(0.643, 0.141, 0.231)); // Start color: Amaranth Purple
+UI_Float3 end_color(@(0.847, 0.592, 0.235));   // End color: Butterscotch
 UI_Float lifetime(1.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
 CircleGeometry particle_geo;
@@ -24,8 +24,8 @@ GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene
 // Build the circle geometry using the correct parameters
 center_circle_geo.build(circle_radius, 32, 0.0, 2 * Math.PI); // radius, segments, thetaStart, thetaLength
 
-// Set the material color (white color)
-Color.WHITE => center_circle_material.color;
+// Set the material color to Alloy Orange (converted to RGB)
+@(0.741, 0.388, 0.184) => center_circle_material.color;
 
 // Particle class definition
 class Particle {
@@ -68,6 +68,13 @@ class Sphere {
         pos => sphere_mesh.pos;
         pos => target_position; // Initial target position is the same
         0 => shrinking;
+
+        // Randomly assign color between Amaranth Purple and Butterscotch
+        if (Math.random2f(0, 1) < 0.5) {
+            @(0.643, 0.141, 0.231) => sphere_mesh.color; // Amaranth Purple
+        } else {
+            @(0.847, 0.592, 0.235) => sphere_mesh.color; // Butterscotch
+        }
     }
 }
 
@@ -121,7 +128,7 @@ class ParticleSystem {
             p.particle_mat.color() => p.color;
 
             // Set random direction
-            Math.random2f(0, 1 * Math.PI) => float random_angle;
+            Math.random2f(0, 2 * Math.PI) => float random_angle;
             Math.cos(random_angle) => p.direction.x;
             Math.sin(random_angle) => p.direction.y;
 
