@@ -8,18 +8,18 @@ GG.renderPass() --> BloomPass bloom_pass --> output_pass;
 bloom_pass.input(GG.renderPass().colorOutput());
 output_pass.input(bloom_pass.colorOutput());
 
-4.0 => bloom_pass.intensity; // Bloom intensity
-0.5 => bloom_pass.radius;    // Bloom radius
-0.8 => bloom_pass.threshold; // Bloom threshold
+1.0 => bloom_pass.intensity; // Bloom intensity
+0.6 => bloom_pass.radius;    // Bloom radius
+0.3 => bloom_pass.threshold; // Bloom threshold
 
 // Particle system parameters
 UI_Float3 start_color(@(1.0, 0.063, 0.122)); // Start color: Red
 UI_Float3 end_color(@(1.0, 0.063, 0.122));   // End color: Red (same color)
-UI_Float lifetime(1.0);
+UI_Float lifetime(2.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
 CircleGeometry particle_geo;
 
-0.25::second => dur cooldown_duration;
+0.2::second => dur cooldown_duration;
 now => time last_spawn_time;
 
 // Create a centered circle in the middle of the screen
@@ -27,20 +27,36 @@ now => time last_spawn_time;
 base_circle_size => float current_circle_size;  // Current size to track
 0.3 * base_circle_size => float min_circle_size; // 40% smaller target size
 0.0 => float sin_time;  // Time variable for the sine function
-0.12 => float sin_speed; // Speed of the sine function change
+0.1 => float sin_speed; // Speed of the sine function change
 
 vec3 circle_center; // Circle center position
 circle_center.set(0.0, 0.0, 0.0); // Initialize components
 
+// Create the static frame circle (slightly larger than the base circle)
+1.02 * base_circle_size => float frame_circle_size; // 10% larger than the base size
+CircleGeometry frame_circle_geo;
+FlatMaterial frame_circle_material;
+GMesh frame_circle_mesh(frame_circle_geo, frame_circle_material) --> GG.scene();
+
+// Build the static frame circle
+frame_circle_geo.build(frame_circle_size, 32, 0.0, 2 * Math.PI); // radius, segments, thetaStart, thetaLength
+
+// Set the material color for the frame circle to black
+@(0.0, 0.0, 0.0) => frame_circle_material.color;
+
+// Create the dynamic inner circle (which will be rendered on top)
 CircleGeometry center_circle_geo;
 FlatMaterial center_circle_material;
 GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene();
 
-// Build the circle geometry using the correct parameters
+// Build the inner circle geometry using the correct parameters
 center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI); // radius, segments, thetaStart, thetaLength
 
-// Set the material color for the circle to make it more visible (e.g., a light gray)
+// Set the material color for the inner circle to make it more visible (e.g., a light gray)
 @(0.8, 0.8, 0.8) => center_circle_material.color;
+
+// Ensure the moving circle is added to the scene after the static frame circle
+center_circle_mesh --> GG.scene();
 
 // Particle class definition
 class Particle {
@@ -217,12 +233,12 @@ fun void updateCircleSize() {
     sin_time + (sin_speed * GG.dt()) => sin_time;
     
     // Calculate the new circle size based on the sine function
-    base_circle_size - ((base_circle_size - min_circle_size) / 2) * (1 + Math.cos(sin_time)) => current_circle_size;
+    base_circle_size - ((base_circle_size - min_circle_size) / 2) * (1 + Math.sin(sin_time)) => current_circle_size;
 
     // Update ParticleSystem with the new circle size
     current_circle_size => ps.circle_size;
 
-    // Rebuild the circle geometry with the new size
+    // Rebuild the dynamic inner circle geometry with the new size
     center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI);
 }
 
@@ -256,6 +272,6 @@ while (true) {
     ps.update(GG.dt());
     ps.updateSpheres(GG.dt());
 
-    // Update the circle size
+    // Update the dynamic circle size
     updateCircleSize();
 }
