@@ -223,7 +223,7 @@ class ParticleSystem {
             // Handle shrinking
             if (s1.shrinking == 1) {
                 // Reduce the scale over time
-                s1.scale - (dt * 0.05) => s1.scale; // Adjust the shrinking speed as needed
+                s1.scale - (dt * 0.5) => s1.scale; // Adjust the shrinking speed as needed
                 if (s1.scale <= 0) {
                     0 => s1.scale;
                     s1.scale => s1.sphere_mesh.sca;
