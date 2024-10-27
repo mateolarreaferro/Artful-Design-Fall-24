@@ -96,7 +96,7 @@ class ParticleSystem {
             // Update particle properties
             {
                 // Update size
-                Math.random2f(0.1, 1.0) => float size_factor;
+                0.5 => float size_factor;
                 Math.pow(((now - p.spawn_time) / second) / lifetime.val(), 0.5) => float t;
                 size_factor * (1 - t) => p.particle_mesh.sca;
 
@@ -104,8 +104,8 @@ class ParticleSystem {
                 p.color + (end_color.val() - p.color) * t => p.particle_mat.color;
 
                 // Update position using translateX and translateY smoothly
-                (dt * p.direction).x * 0.5 => p.particle_mesh.translateX;
-                (dt * p.direction).y * 0.5 => p.particle_mesh.translateY;
+                (dt * p.direction).x * 0.6 => p.particle_mesh.translateX;
+                (dt * p.direction).y * 0.6 => p.particle_mesh.translateY;
             }
         }
     }
@@ -121,7 +121,7 @@ class ParticleSystem {
             p.particle_mat.color() => p.color;
 
             // Set random direction
-            Math.random2f(0, 2 * Math.PI) => float random_angle;
+            Math.random2f(0, 1 * Math.PI) => float random_angle;
             Math.cos(random_angle) => p.direction.x;
             Math.sin(random_angle) => p.direction.y;
 
@@ -193,8 +193,10 @@ while (true) {
             GWindow.mousePos() => vec2 currentPos;
             GG.camera().screenCoordToWorldPos(currentPos, 2.0) => vec3 worldPos;
 
-            // Spawn a particle at the mouse position
-            ps.spawnParticle(worldPos);
+            // Spawn 5 particles at the mouse position
+            for (0 => int j; j < 5; j++) {
+                ps.spawnParticle(worldPos);
+            }
 
             // Create a new Sphere instance with Brownian motion
             Sphere @ s;
