@@ -284,7 +284,7 @@ ps.init(current_circle_size);
 // Function to smoothly adjust the circle size using a sine function
 fun void updateCircleSize() {
     sin_time + (sin_speed * GG.dt()) => sin_time;
-    base_circle_size - ((base_circle_size - min_circle_size) / 2) * (1 + Math.sin(sin_time)) => current_circle_size;
+    base_circle_size - ((base_circle_size - min_circle_size) / 2) * (1 + Math.cos(sin_time)) => current_circle_size;
     current_circle_size => ps.circle_size;
     center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI);
 }
