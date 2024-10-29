@@ -8,8 +8,8 @@ bloom_pass.input(GG.renderPass().colorOutput());
 output_pass.input(bloom_pass.colorOutput());
 
 1.0 => bloom_pass.intensity;
-0.6 => bloom_pass.radius;
-0.3 => bloom_pass.threshold;
+0.1 => bloom_pass.radius;
+0.5 => bloom_pass.threshold;
 
 UI_Float3 start_color(@(1.0, 0.063, 0.122));
 UI_Float3 end_color(@(1.0, 0.063, 0.122));
@@ -114,7 +114,7 @@ class ParticleSystem {
             }
 
             {
-                0.5 * (1 - Math.pow(((now - p.spawn_time) / second) / lifetime.val(), 0.5)) => p.particle_mesh.sca;
+                0.3 * (1 - Math.pow(((now - p.spawn_time) / second) / lifetime.val(), 0.2)) => p.particle_mesh.sca;
                 p.color + (end_color.val() - p.color) * Math.pow(((now - p.spawn_time) / second) / lifetime.val(), 0.5) => p.particle_mat.color;
                 (dt * p.direction).x * 0.6 => p.particle_mesh.translateX;
                 (dt * p.direction).y * 0.6 => p.particle_mesh.translateY;
