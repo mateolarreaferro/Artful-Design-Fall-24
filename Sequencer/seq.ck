@@ -70,20 +70,26 @@ class Sphere {
     vec3 target_position;
     float scale;
     int shrinking;
+    int isBlue;
+    int isSmall;
 
-    fun void init(vec3 pos) {
+    // Modified init function to accept color, size, and small parameters
+    fun void init(vec3 pos, int color, float size, int small) {
         new GSphere @=> sphere_mesh;
         sphere_mesh --> GG.scene();
-        0.25 => scale => sphere_mesh.sca;
+        size => scale => sphere_mesh.sca;
         pos => position;
         pos => sphere_mesh.pos;
         pos => target_position;
         0 => shrinking;
+        small => isSmall;
 
-        if (Math.random2f(0, 1) < 0.5) {
-            sphere_mesh.color(@(0.2, 0.396, 0.541));
+        if (color == 1) {
+            sphere_mesh.color(@(0.2, 0.396, 0.541)); // Blue
+            1 => isBlue;
         } else {
-            sphere_mesh.color(@(0.965, 0.682, 0.176));
+            sphere_mesh.color(@(0.965, 0.682, 0.176)); // Yellow
+            0 => isBlue;
         }
     }
 }
@@ -94,9 +100,15 @@ class ParticleSystem {
     0 => int num_active;
     float circle_size;
 
+    // Cooldown variables for sphere instantiation
+    time last_sphere_instantiation_time;
+    dur sphere_cooldown_duration;
+
     // Initializes the particle system with the current circle size
     fun void init(float currentSize) {
         currentSize => circle_size;
+        now - 3::second => last_sphere_instantiation_time; // Initialize to allow immediate instantiation
+        3::second => sphere_cooldown_duration; // Cooldown duration of 3 seconds
     }
 
     // Updates active particles
@@ -156,6 +168,22 @@ class ParticleSystem {
 
                     for (0 => int k; k < 10; k++) {
                         spawnParticle(collision_pos, collision_color.val());
+                    }
+
+                    // Check for blue-yellow collision with cooldown
+                    if (((s1.isBlue == 1 && s2.isBlue == 0) || (s1.isBlue == 0 && s2.isBlue == 1)) &&
+                        s1.isSmall == 0 && s2.isSmall == 0 && s1.shrinking == 0 && s2.shrinking == 0 &&
+                        now - last_sphere_instantiation_time >= sphere_cooldown_duration) {
+
+                        // Instantiate a smaller blue sphere at collision position
+                        Sphere @ newSphere;
+                        new Sphere @=> newSphere;
+                        s1.scale * 0.6 => float newSize; // 40% smaller
+                        newSphere.init(collision_pos, 1, newSize, 1); // Color=1(blue), size=newSize, small=1
+                        spheres << newSphere;
+
+                        // Update last instantiation time
+                        now => last_sphere_instantiation_time;
                     }
                 }
             }
@@ -219,7 +247,11 @@ while (true) {
 
             Sphere @ s;
             new Sphere @=> s;
-            s.init(worldPos);
+            // Randomly assign color
+            (Math.random2f(0, 1) < 0.5) ? 1 : 0 => int color; // 1 for blue, 0 for yellow
+            0.25 => float size; // Base size
+            0 => int small; // Not small
+            s.init(worldPos, color, size, small);
             spheres << s;
 
             now => last_spawn_time;
