@@ -29,10 +29,18 @@ base_circle_size => float current_circle_size;
 vec3 circle_center;
 circle_center.set(0.0, 0.0, 0.0);
 
+// Adjusted positions for rendering order
+-0.01 => float frame_circle_z;
+0.0 => float env_circle_z;
+0.01 => float nd_circle_z;
+
 1.02 * base_circle_size => float frame_circle_size;
 CircleGeometry frame_circle_geo;
 FlatMaterial frame_circle_material;
 GMesh frame_circle_mesh(frame_circle_geo, frame_circle_material) --> GG.scene();
+
+// Set frame circle position with adjusted z
+@(0.0, 0.0, frame_circle_z) => frame_circle_mesh.pos;
 
 frame_circle_geo.build(frame_circle_size, 32, 0.0, 2 * Math.PI);
 @(0.0, 0.0, 0.0) => frame_circle_material.color;
@@ -41,8 +49,26 @@ CircleGeometry center_circle_geo;
 FlatMaterial center_circle_material;
 GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene();
 
+// Set environment circle position with adjusted z
+@(circle_center.x, circle_center.y, env_circle_z) => center_circle_mesh.pos;
+
 center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI);
 @(0.8, 0.8, 0.8) => center_circle_material.color;
+
+// Variables for the natural disaster circle
+float ndCircle_size;
+vec3 ndCircle_position;
+CircleGeometry ndCircle_geo;
+FlatMaterial ndCircle_material;
+GMesh ndCircle_mesh;
+time ndCircle_start_time;
+0 => int ndCircle_active; // ndCircle is initially not active
+0.0 => float ndCircle_scale; // Current scale of the ndCircle
+
+now => time last_ndCircle_time;
+Math.random2f(10.0, 20.0)::second => dur ndCircle_interval; // Interval between appearances
+5.0 => float ndCircle_lifespan; // ndCircle lifespan is 5 seconds
+5.0 => float ndCircle_shrink_duration; // Shrink duration is 5 seconds
 
 // Define colors
 @(0.2, 0.396, 0.541) => vec3 blue_color;
@@ -51,6 +77,7 @@ center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI);
 @(1.0, 0.0, 1.0) => vec3 pink_color;
 @(0.0, 1.0, 0.0) => vec3 green_color;
 
+// Particle class definition
 class Particle {
     FlatMaterial particle_mat;
     GMesh particle_mesh(particle_geo, particle_mat) --> GG.scene();
@@ -72,6 +99,7 @@ fun float easeInOutCubic(float t) {
 
 10 => float speedFactor;
 
+// Sphere class definition
 class Sphere {
     GSphere @ sphere_mesh;
     vec3 position;
@@ -272,6 +300,17 @@ class ParticleSystem {
                 }
             }
 
+            // Check if ndCircle is active and if sphere is inside ndCircle
+            if (ndCircle_active == 1) {
+                // Calculate distance between sphere and ndCircle center
+                Math.sqrt(Math.pow(s1.position.x - ndCircle_position.x, 2) + Math.pow(s1.position.y - ndCircle_position.y, 2)) => float dist_to_ndCircle;
+
+                if (dist_to_ndCircle <= ndCircle_scale) {
+                    // Sphere is inside ndCircle, start shrinking
+                    1 => s1.shrinking;
+                }
+            }
+
             if (s1.shrinking == 0) {
                 s1.target_position.x + Math.random2f(-0.01, 0.01) => s1.target_position.x;
                 s1.target_position.y + Math.random2f(-0.01, 0.01) => s1.target_position.y;
@@ -345,4 +384,56 @@ while (true) {
     ps.update(GG.dt());
     ps.updateSpheres(GG.dt());
     updateCircleSize();
+
+    // Natural Disaster Circle Logic
+    if (ndCircle_active == 0 && now - last_ndCircle_time >= ndCircle_interval) {
+        // Create a new ndCircle
+        1 => ndCircle_active;
+        now => ndCircle_start_time;
+        now => last_ndCircle_time;
+        Math.random2f(10.0, 20.0)::second => ndCircle_interval; // Set next interval
+
+        // Set ndCircle size (at least 1/4 the size of envCircle)
+        current_circle_size / 4.0 + Math.random2f(0.0, current_circle_size / 4.0) => ndCircle_size;
+
+        // Random position within envCircle
+        Math.random2f(0, 2 * Math.PI) => float angle;
+        Math.random2f(0, (current_circle_size - ndCircle_size)) => float radius;
+        circle_center.x + radius * Math.cos(angle) => ndCircle_position.x;
+        circle_center.y + radius * Math.sin(angle) => ndCircle_position.y;
+        nd_circle_z => ndCircle_position.z; // Set ndCircle z position
+
+        // Initialize ndCircle geometry and mesh
+        new CircleGeometry @=> ndCircle_geo;
+        new FlatMaterial @=> ndCircle_material;
+        new GMesh(ndCircle_geo, ndCircle_material) @=> ndCircle_mesh;
+        ndCircle_mesh --> GG.scene();
+        ndCircle_position => ndCircle_mesh.pos;
+        ndCircle_size => ndCircle_scale; // Initialize ndCircle_scale
+        ndCircle_scale => ndCircle_mesh.sca; // Set scale directly
+        @(1.0, 0.0, 0.0) => ndCircle_material.color; // Set ndCircle color to red for visibility
+
+        ndCircle_geo.build(1.0, 32, 0.0, 2 * Math.PI); // Build with unit size
+    }
+
+    // Update ndCircle if active
+    if (ndCircle_active == 1) {
+        (now - ndCircle_start_time) / second => float ndCircle_elapsed;
+
+        if (ndCircle_elapsed >= ndCircle_lifespan) {
+            // ndCircle lifespan is over, remove ndCircle
+            ndCircle_mesh.detach();
+            null @=> ndCircle_mesh;
+            null @=> ndCircle_geo;
+            null @=> ndCircle_material;
+            0 => ndCircle_active;
+        } else {
+            // Shrink ndCircle over ndCircle_shrink_duration
+            ndCircle_size * (1.0 - ndCircle_elapsed / ndCircle_shrink_duration) => ndCircle_scale;
+            if (ndCircle_scale < 0.0) {
+                0.0 => ndCircle_scale;
+            }
+            ndCircle_scale => ndCircle_mesh.sca; // Set scale directly
+        }
+    }
 }
