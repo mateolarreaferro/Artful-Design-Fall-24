@@ -13,7 +13,6 @@ output_pass.input(bloom_pass.colorOutput());
 
 UI_Float3 start_color(@(1.0, 0.063, 0.122));
 UI_Float3 end_color(@(1.0, 0.063, 0.122));
-UI_Float3 collision_color(@(0.0, 1.0, 0.0));
 UI_Float lifetime(2.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
 CircleGeometry particle_geo;
@@ -44,6 +43,13 @@ GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene
 
 center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI);
 @(0.8, 0.8, 0.8) => center_circle_material.color;
+
+// Define colors
+@(0.2, 0.396, 0.541) => vec3 blue_color;
+@(0.965, 0.682, 0.176) => vec3 yellow_color;
+@(0.5, 0.0, 0.5) => vec3 purple_color;
+@(1.0, 0.0, 1.0) => vec3 pink_color;
+@(0.0, 1.0, 0.0) => vec3 green_color;
 
 class Particle {
     FlatMaterial particle_mat;
@@ -85,10 +91,10 @@ class Sphere {
         small => isSmall;
 
         if (color == 1) {
-            sphere_mesh.color(@(0.2, 0.396, 0.541)); // Blue
+            sphere_mesh.color(blue_color); // Blue
             1 => isBlue;
         } else {
-            sphere_mesh.color(@(0.965, 0.682, 0.176)); // Yellow
+            sphere_mesh.color(yellow_color); // Yellow
             0 => isBlue;
         }
     }
@@ -166,11 +172,61 @@ class ParticleSystem {
                     vec3 collision_pos;
                     (s1.position + s2.position) / 2 => collision_pos;
 
-                    for (0 => int k; k < 10; k++) {
-                        spawnParticle(collision_pos, collision_color.val());
+                    // Determine collision type
+                    int collisionType;
+                    if (s1.isSmall == 0 && s2.isSmall == 0) {
+                        0 => collisionType; // normal-normal collision
+                    } else if (s1.isSmall == 1 && s2.isSmall == 1) {
+                        1 => collisionType; // small-small collision
+                    } else {
+                        2 => collisionType; // small-normal collision
                     }
 
-                    // Check for blue-yellow collision with cooldown
+                    vec3 collision_color;
+                    0 => int collisionColorSet; // Flag to indicate if collision_color has been set
+
+                    // Set collision color based on collision type and spheres' properties
+                    if (collisionType == 0) {
+                        // Normal Sphere Collision
+                        if ((s1.isBlue == 1 && s2.isBlue == 0) || (s1.isBlue == 0 && s2.isBlue == 1)) {
+                            blue_color => collision_color;
+                            1 => collisionColorSet;
+                        } else if (s1.isBlue == 1 && s2.isBlue == 1) {
+                            yellow_color => collision_color;
+                            1 => collisionColorSet;
+                        } else if (s1.isBlue == 0 && s2.isBlue == 0) {
+                            yellow_color => collision_color;
+                            1 => collisionColorSet;
+                        }
+                    } else if (collisionType == 1) {
+                        // Small to Small Collisions
+                        if (s1.isBlue == 1 && s2.isBlue == 1) {
+                            purple_color => collision_color;
+                            1 => collisionColorSet;
+                        }
+                    } else if (collisionType == 2) {
+                        // Small to Normal Collisions
+                        if (((s1.isBlue == 1 && s1.isSmall == 1 && s2.isBlue == 1 && s2.isSmall == 0) ||
+                             (s1.isBlue == 1 && s1.isSmall == 0 && s2.isBlue == 1 && s2.isSmall == 1))) {
+                            // blue small + blue normal => pink
+                            pink_color => collision_color;
+                            1 => collisionColorSet;
+                        } else if (((s1.isBlue == 1 && s1.isSmall == 1 && s2.isBlue == 0 && s2.isSmall == 0) ||
+                                    (s1.isBlue == 0 && s1.isSmall == 0 && s2.isBlue == 1 && s2.isSmall == 1))) {
+                            // blue small + yellow normal => green
+                            green_color => collision_color;
+                            1 => collisionColorSet;
+                        }
+                    }
+
+                    // Spawn particles with the determined collision color
+                    if (collisionColorSet == 1) {
+                        for (0 => int k; k < 10; k++) {
+                            spawnParticle(collision_pos, collision_color);
+                        }
+                    }
+
+                    // Check for blue-yellow collision with cooldown and instantiate smaller blue sphere
                     if (((s1.isBlue == 1 && s2.isBlue == 0) || (s1.isBlue == 0 && s2.isBlue == 1)) &&
                         s1.isSmall == 0 && s2.isSmall == 0 && s1.shrinking == 0 && s2.shrinking == 0 &&
                         now - last_sphere_instantiation_time >= sphere_cooldown_duration) {
