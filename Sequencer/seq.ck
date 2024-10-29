@@ -59,9 +59,11 @@ class Particle {
     vec2 direction;
     time spawn_time;
     vec3 color;
+    float speed;
+    float life_multiplier;
 }
 
-128 => int PARTICLE_POOL_SIZE;
+256 => int PARTICLE_POOL_SIZE; // Increased pool size
 Particle particles[PARTICLE_POOL_SIZE];
 
 fun float easeInOutCubic(float t) {
@@ -77,10 +79,10 @@ class Sphere {
     float scale;
     int shrinking;
     int isBlue;
-    int isSmall;
+    int sizeCategory; // 0: normal, 1: small, 2: tiny
 
-    // Modified init function to accept color, size, and small parameters
-    fun void init(vec3 pos, int color, float size, int small) {
+    // Modified init function to accept color and size category
+    fun void init(vec3 pos, int color, float size, int category) {
         new GSphere @=> sphere_mesh;
         sphere_mesh --> GG.scene();
         size => scale => sphere_mesh.sca;
@@ -88,7 +90,7 @@ class Sphere {
         pos => sphere_mesh.pos;
         pos => target_position;
         0 => shrinking;
-        small => isSmall;
+        category => sizeCategory;
 
         if (color == 1) {
             sphere_mesh.color(blue_color); // Blue
@@ -122,7 +124,9 @@ class ParticleSystem {
         for (0 => int i; i < num_active; i++) {
             particles[i] @=> Particle p;
 
-            if (now - p.spawn_time >= lifetime.val()::second) {
+            lifetime.val() * p.life_multiplier => float particle_lifetime;
+
+            if (now - p.spawn_time >= particle_lifetime::second) {
                 0 => p.particle_mesh.sca;
                 num_active--;
                 particles[num_active] @=> particles[i];
@@ -132,16 +136,16 @@ class ParticleSystem {
             }
 
             {
-                0.3 * (1 - Math.pow(((now - p.spawn_time) / second) / lifetime.val(), 0.2)) => p.particle_mesh.sca;
-                p.color + (end_color.val() - p.color) * Math.pow(((now - p.spawn_time) / second) / lifetime.val(), 0.5) => p.particle_mat.color;
-                (dt * p.direction).x * 0.6 => p.particle_mesh.translateX;
-                (dt * p.direction).y * 0.6 => p.particle_mesh.translateY;
+                0.3 * (1 - Math.pow(((now - p.spawn_time) / second) / particle_lifetime, 0.2)) => p.particle_mesh.sca;
+                p.color + (end_color.val() - p.color) * Math.pow(((now - p.spawn_time) / second) / particle_lifetime, 0.5) => p.particle_mat.color;
+                (dt * p.direction).x * p.speed => p.particle_mesh.translateX;
+                (dt * p.direction).y * p.speed => p.particle_mesh.translateY;
             }
         }
     }
 
-    // Spawns a new particle at a given position with a specified color
-    fun void spawnParticle(vec3 pos, vec3 color) {
+    // Spawns a new particle at a given position with specified properties
+    fun void spawnParticle(vec3 pos, vec3 color, float speedMultiplier, float lifeMultiplier) {
         if (num_active < PARTICLE_POOL_SIZE) {
             particles[num_active] @=> Particle p;
 
@@ -154,6 +158,8 @@ class ParticleSystem {
 
             now => p.spawn_time;
             pos => p.particle_mesh.pos;
+            speedMultiplier => p.speed;
+            lifeMultiplier => p.life_multiplier;
             num_active++;
         }
     }
@@ -174,20 +180,23 @@ class ParticleSystem {
 
                     // Determine collision type
                     int collisionType;
-                    if (s1.isSmall == 0 && s2.isSmall == 0) {
-                        0 => collisionType; // normal-normal collision
-                    } else if (s1.isSmall == 1 && s2.isSmall == 1) {
-                        1 => collisionType; // small-small collision
+                    if (s1.sizeCategory == s2.sizeCategory) {
+                        s1.sizeCategory => collisionType; // 0: normal-normal, 1: small-small, 2: tiny-tiny
                     } else {
-                        2 => collisionType; // small-normal collision
+                        3 => collisionType; // Mixed sizes
                     }
 
                     vec3 collision_color;
                     0 => int collisionColorSet; // Flag to indicate if collision_color has been set
 
-                    // Set collision color based on collision type and spheres' properties
+                    0.6 => float particleSpeed;
+                    1.0 => float particleLife;
+
+                    // Set collision color and particle properties based on collision type and spheres' properties
                     if (collisionType == 0) {
                         // Normal Sphere Collision
+                        0.6 => particleSpeed;
+                        1.0 => particleLife;
                         if ((s1.isBlue == 1 && s2.isBlue == 0) || (s1.isBlue == 0 && s2.isBlue == 1)) {
                             blue_color => collision_color;
                             1 => collisionColorSet;
@@ -198,48 +207,67 @@ class ParticleSystem {
                             yellow_color => collision_color;
                             1 => collisionColorSet;
                         }
-                    } else if (collisionType == 1) {
-                        // Small to Small Collisions
+                    } else if (collisionType == 1 || collisionType == 2) {
+                        // Small-Small or Tiny-Tiny Collisions
+                        if (collisionType == 1) {
+                            1.0 => particleSpeed;
+                            0.5 => particleLife;
+                        } else {
+                            1.5 => particleSpeed;
+                            0.25 => particleLife;
+                        }
                         if (s1.isBlue == 1 && s2.isBlue == 1) {
                             purple_color => collision_color;
                             1 => collisionColorSet;
                         }
-                    } else if (collisionType == 2) {
-                        // Small to Normal Collisions
-                        if (((s1.isBlue == 1 && s1.isSmall == 1 && s2.isBlue == 1 && s2.isSmall == 0) ||
-                             (s1.isBlue == 1 && s1.isSmall == 0 && s2.isBlue == 1 && s2.isSmall == 1))) {
-                            // blue small + blue normal => pink
-                            pink_color => collision_color;
-                            1 => collisionColorSet;
-                        } else if (((s1.isBlue == 1 && s1.isSmall == 1 && s2.isBlue == 0 && s2.isSmall == 0) ||
-                                    (s1.isBlue == 0 && s1.isSmall == 0 && s2.isBlue == 1 && s2.isSmall == 1))) {
-                            // blue small + yellow normal => green
-                            green_color => collision_color;
-                            1 => collisionColorSet;
-                        }
                     }
 
-                    // Spawn particles with the determined collision color
                     if (collisionColorSet == 1) {
                         for (0 => int k; k < 10; k++) {
-                            spawnParticle(collision_pos, collision_color);
+                            spawnParticle(collision_pos, collision_color, particleSpeed, particleLife);
                         }
                     }
 
-                    // Check for blue-yellow collision with cooldown and instantiate smaller blue sphere
-                    if (((s1.isBlue == 1 && s2.isBlue == 0) || (s1.isBlue == 0 && s2.isBlue == 1)) &&
-                        s1.isSmall == 0 && s2.isSmall == 0 && s1.shrinking == 0 && s2.shrinking == 0 &&
+                    // Sphere creation logic for specific collisions
+                    if (collisionType == 0 &&
+                        ((s1.isBlue == 1 && s2.isBlue == 0) || (s1.isBlue == 0 && s2.isBlue == 1)) &&
+                        s1.shrinking == 0 && s2.shrinking == 0 &&
                         now - last_sphere_instantiation_time >= sphere_cooldown_duration) {
 
                         // Instantiate a smaller blue sphere at collision position
                         Sphere @ newSphere;
                         new Sphere @=> newSphere;
                         s1.scale * 0.6 => float newSize; // 40% smaller
-                        newSphere.init(collision_pos, 1, newSize, 1); // Color=1(blue), size=newSize, small=1
+                        newSphere.init(collision_pos, 1, newSize, 1); // Color=1(blue), size=newSize, sizeCategory=1 (small)
                         spheres << newSphere;
 
                         // Update last instantiation time
                         now => last_sphere_instantiation_time;
+                    } else if (collisionType == 3) {
+                        // Mixed size collisions
+                        // Handle small blue + normal yellow creating a tiny blue sphere
+                        if (((s1.isBlue == 1 && s1.sizeCategory == 1 && s2.isBlue == 0 && s2.sizeCategory == 0) ||
+                             (s1.isBlue == 0 && s1.sizeCategory == 0 && s2.isBlue == 1 && s2.sizeCategory == 1)) &&
+                            now - last_sphere_instantiation_time >= sphere_cooldown_duration) {
+
+                            Sphere @ newSphere;
+                            new Sphere @=> newSphere;
+
+                            // Determine the normal sphere's scale
+                            float normalScale;
+                            if (s1.sizeCategory == 0) {
+                                s1.scale => normalScale;
+                            } else {
+                                s2.scale => normalScale;
+                            }
+
+                            normalScale * 0.4 => float newSize; // 60% smaller than normal sphere
+                            newSphere.init(collision_pos, 1, newSize, 2); // Color=1(blue), size=newSize, sizeCategory=2 (tiny)
+                            spheres << newSphere;
+
+                            // Update last instantiation time
+                            now => last_sphere_instantiation_time;
+                        }
                     }
                 }
             }
@@ -281,7 +309,7 @@ class ParticleSystem {
 ParticleSystem ps;
 ps.init(current_circle_size);
 
-// Function to smoothly adjust the circle size using a sine function
+// Function to smoothly adjust the circle size using a cosine function
 fun void updateCircleSize() {
     sin_time + (sin_speed * GG.dt()) => sin_time;
     base_circle_size - ((base_circle_size - min_circle_size) / 2) * (1 + Math.cos(sin_time)) => current_circle_size;
@@ -298,7 +326,7 @@ while (true) {
             GG.camera().screenCoordToWorldPos(currentPos, 2.0) => vec3 worldPos;
 
             for (0 => int j; j < 5; j++) {
-                ps.spawnParticle(worldPos, start_color.val());
+                ps.spawnParticle(worldPos, start_color.val(), 0.6, 1.0);
             }
 
             Sphere @ s;
@@ -306,8 +334,8 @@ while (true) {
             // Randomly assign color
             (Math.random2f(0, 1) < 0.5) ? 1 : 0 => int color; // 1 for blue, 0 for yellow
             0.25 => float size; // Base size
-            0 => int small; // Not small
-            s.init(worldPos, color, size, small);
+            0 => int category; // 0: normal
+            s.init(worldPos, color, size, category);
             spheres << s;
 
             now => last_spawn_time;
