@@ -74,10 +74,19 @@ Math.random2f(10.0, 20.0)::second => dur ndCircle_interval; // Interval between 
 @(0.2, 0.396, 0.541) => vec3 blue_color;
 @(0.965, 0.682, 0.176) => vec3 yellow_color;
 @(0.5, 0.0, 0.5) => vec3 purple_color;
+@(1.0, 0.5, 0.0) => vec3 orange_color; // Added orange color
 @(1.0, 0.0, 1.0) => vec3 pink_color;
 @(0.0, 1.0, 0.0) => vec3 green_color;
 
-// Particle class definition
+// Particle speed and lifetime constants
+0.8 => float slowSpeed;
+1.2 => float midSpeed;
+1.6 => float fastSpeed;
+
+1.25 => float normalLifetime; // For normal-based
+0.75 => float smallLifetime;  // For small-based
+0.25 => float tinyLifetime;   // For tiny-based
+
 class Particle {
     FlatMaterial particle_mat;
     GMesh particle_mesh(particle_geo, particle_mat) --> GG.scene();
@@ -99,7 +108,6 @@ fun float easeInOutCubic(float t) {
 
 10 => float speedFactor;
 
-// Sphere class definition
 class Sphere {
     GSphere @ sphere_mesh;
     vec3 position;
@@ -215,48 +223,74 @@ class ParticleSystem {
                     }
 
                     vec3 collision_color;
-                    0 => int collisionColorSet; // Flag to indicate if collision_color has been set
 
-                    0.6 => float particleSpeed;
-                    1.0 => float particleLife;
-
-                    // Set collision color and particle properties based on collision type and spheres' properties
-                    if (collisionType == 0) {
-                        // Normal Sphere Collision
-                        0.6 => particleSpeed;
-                        1.0 => particleLife;
-                        if ((s1.isBlue == 1 && s2.isBlue == 0) || (s1.isBlue == 0 && s2.isBlue == 1)) {
-                            blue_color => collision_color;
-                            1 => collisionColorSet;
-                        } else if (s1.isBlue == 1 && s2.isBlue == 1) {
+                    // Determine particle color according to the color rules
+                    if (s1.isBlue != s2.isBlue) {
+                        // Spheres have different colors
+                        // Yellow is dominant
+                        if (s1.isBlue == 0 || s2.isBlue == 0) {
+                            // At least one sphere is Yellow
                             yellow_color => collision_color;
-                            1 => collisionColorSet;
-                        } else if (s1.isBlue == 0 && s2.isBlue == 0) {
-                            yellow_color => collision_color;
-                            1 => collisionColorSet;
-                        }
-                    } else if (collisionType == 1 || collisionType == 2) {
-                        // Small-Small or Tiny-Tiny Collisions
-                        if (collisionType == 1) {
-                            1.0 => particleSpeed;
-                            0.5 => particleLife;
                         } else {
-                            1.5 => particleSpeed;
-                            0.25 => particleLife;
+                            // Both are Blue (should not reach here)
+                            blue_color => collision_color;
                         }
-                        if (s1.isBlue == 1 && s2.isBlue == 1) {
+                    } else {
+                        // Spheres have same color
+                        if (s1.isBlue == 0) {
+                            // Both are Yellow
+                            orange_color => collision_color;
+                        } else {
+                            // Both are Blue
                             purple_color => collision_color;
-                            1 => collisionColorSet;
                         }
                     }
 
-                    if (collisionColorSet == 1) {
-                        for (0 => int k; k < 10; k++) {
-                            spawnParticle(collision_pos, collision_color, particleSpeed, particleLife);
-                        }
+                    // Determine particle speed and lifetime according to size categories
+                    float particleSpeed;
+                    float particleLife;
+
+                    // Determine size-based lifetime
+                    if (s1.sizeCategory == 0 || s2.sizeCategory == 0) {
+                        // At least one normal sphere
+                        normalLifetime => particleLife;
+                    } else if (s1.sizeCategory == 1 || s2.sizeCategory == 1) {
+                        // At least one small sphere
+                        smallLifetime => particleLife;
+                    } else {
+                        // Both tiny spheres
+                        tinyLifetime => particleLife;
                     }
 
-                    // Sphere creation logic for specific collisions
+                    // Determine speed according to collision sizes
+                    // For speed, mapping is:
+                    // normal + normal = slow
+                    // normal + small = mid
+                    // normal + tiny = mid
+                    // small + small = mid
+                    // small + tiny = mid
+                    // tiny + tiny = fast
+
+                    if (s1.sizeCategory == 2 && s2.sizeCategory == 2) {
+                        // tiny + tiny
+                        fastSpeed => particleSpeed;
+                    } else if (s1.sizeCategory == 0 && s2.sizeCategory == 0) {
+                        // normal + normal
+                        slowSpeed => particleSpeed;
+                    } else {
+                        // All other combinations
+                        midSpeed => particleSpeed;
+                    }
+
+                    // Spawn particles
+                    for (0 => int k; k < 10; k++) {
+                        spawnParticle(collision_pos, collision_color, particleSpeed, particleLife);
+                    }
+
+                    // Sphere creation logic remains unchanged
+                    // ...
+
+                    // Sphere creation logic for specific collisions (unchanged)
                     if (collisionType == 0 &&
                         ((s1.isBlue == 1 && s2.isBlue == 0) || (s1.isBlue == 0 && s2.isBlue == 1)) &&
                         s1.shrinking == 0 && s2.shrinking == 0 &&
