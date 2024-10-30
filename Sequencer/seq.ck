@@ -116,6 +116,7 @@ class Sphere {
     int shrinking;
     int isBlue;
     int sizeCategory; // 0: normal, 1: small, 2: tiny
+    int soundPlayed;  // Flag to track if dying sound has been played
 
     // Modified init function to accept color and size category
     fun void init(vec3 pos, int color, float size, int category) {
@@ -127,6 +128,7 @@ class Sphere {
         pos => target_position;
         0 => shrinking;
         category => sizeCategory;
+        0 => soundPlayed; // Initialize soundPlayed to 0
 
         if (color == 1) {
             sphere_mesh.color(blue_color); // Blue
@@ -336,9 +338,13 @@ class ParticleSystem {
                 // Calculate distance between sphere and ndCircle center
                 Math.sqrt(Math.pow(s1.position.x - ndCircle_position.x, 2) + Math.pow(s1.position.y - ndCircle_position.y, 2)) => float dist_to_ndCircle;
 
-                if (dist_to_ndCircle <= ndCircle_scale) {
+                if (dist_to_ndCircle <= ndCircle_scale && s1.shrinking == 0) {
                     // Sphere is inside ndCircle, start shrinking
                     1 => s1.shrinking;
+                    if (s1.soundPlayed == 0) {
+                        spork ~ playDyingSound();
+                        1 => s1.soundPlayed;
+                    }
                 }
             }
 
@@ -357,6 +363,10 @@ class ParticleSystem {
 
             if (distanceFromCenter > circle_size && s1.shrinking == 0) {
                 1 => s1.shrinking;
+                if (s1.soundPlayed == 0) {
+                    spork ~ playDyingSound();
+                    1 => s1.soundPlayed;
+                }
             }
 
             if (s1.shrinking == 1) {
@@ -393,6 +403,26 @@ fun void playBubbleSound() {
 
     // Load the sound file
     buffer.read("samples/bubble.wav");
+
+    // Reset position to the beginning
+    0 => buffer.pos;
+
+    // Start playback
+    1 => buffer.play;
+
+    // Wait until the sound finishes
+    buffer.length() => now;
+
+    // Disconnect to clean up
+    buffer =< dac;
+}
+
+// Function to play dying sound
+fun void playDyingSound() {
+    SndBuf buffer => dac;
+
+    // Load the sound file
+    buffer.read("samples/dying.wav");
 
     // Reset position to the beginning
     0 => buffer.pos;
