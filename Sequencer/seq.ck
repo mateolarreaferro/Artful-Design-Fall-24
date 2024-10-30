@@ -79,13 +79,13 @@ Math.random2f(10.0, 20.0)::second => dur ndCircle_interval; // Interval between 
 @(0.0, 1.0, 0.0) => vec3 green_color;
 
 // Particle speed and lifetime constants
-0.8 => float slowSpeed;
-1.2 => float midSpeed;
-1.6 => float fastSpeed;
+0.6 => float slowSpeed;
+1.0 => float midSpeed;
+1.5 => float fastSpeed;
 
-1.25 => float normalLifetime; // For normal-based
-0.75 => float smallLifetime;  // For small-based
-0.25 => float tinyLifetime;   // For tiny-based
+2.0 => float normalLifetime; // For normal-based
+1.0 => float smallLifetime;  // For small-based
+0.5 => float tinyLifetime;   // For tiny-based
 
 class Particle {
     FlatMaterial particle_mat;
@@ -263,14 +263,6 @@ class ParticleSystem {
                     }
 
                     // Determine speed according to collision sizes
-                    // For speed, mapping is:
-                    // normal + normal = slow
-                    // normal + small = mid
-                    // normal + tiny = mid
-                    // small + small = mid
-                    // small + tiny = mid
-                    // tiny + tiny = fast
-
                     if (s1.sizeCategory == 2 && s2.sizeCategory == 2) {
                         // tiny + tiny
                         fastSpeed => particleSpeed;
@@ -288,7 +280,6 @@ class ParticleSystem {
                     }
 
                     // Sphere creation logic remains unchanged
-                    // ...
 
                     // Sphere creation logic for specific collisions (unchanged)
                     if (collisionType == 0 &&
@@ -302,6 +293,9 @@ class ParticleSystem {
                         s1.scale * 0.6 => float newSize; // 40% smaller
                         newSphere.init(collision_pos, 1, newSize, 1); // Color=1(blue), size=newSize, sizeCategory=1 (small)
                         spheres << newSphere;
+
+                        // Play bubble sound
+                        spork ~ playBubbleSound();
 
                         // Update last instantiation time
                         now => last_sphere_instantiation_time;
@@ -326,6 +320,9 @@ class ParticleSystem {
                             normalScale * 0.4 => float newSize; // 60% smaller than normal sphere
                             newSphere.init(collision_pos, 1, newSize, 2); // Color=1(blue), size=newSize, sizeCategory=2 (tiny)
                             spheres << newSphere;
+
+                            // Play bubble sound
+                            spork ~ playBubbleSound();
 
                             // Update last instantiation time
                             now => last_sphere_instantiation_time;
@@ -390,6 +387,26 @@ fun void updateCircleSize() {
     center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI);
 }
 
+// Function to play bubble sound
+fun void playBubbleSound() {
+    SndBuf buffer => dac;
+
+    // Load the sound file
+    buffer.read("samples/bubble.wav");
+
+    // Reset position to the beginning
+    0 => buffer.pos;
+
+    // Start playback
+    1 => buffer.play;
+
+    // Wait until the sound finishes
+    buffer.length() => now;
+
+    // Disconnect to clean up
+    buffer =< dac;
+}
+
 while (true) {
     GG.nextFrame() => now;
 
@@ -410,6 +427,9 @@ while (true) {
             0 => int category; // 0: normal
             s.init(worldPos, color, size, category);
             spheres << s;
+
+            // Play bubble sound
+            spork ~ playBubbleSound();
 
             now => last_spawn_time;
         }
