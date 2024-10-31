@@ -66,7 +66,7 @@ time ndCircle_start_time;
 0.0 => float ndCircle_scale; // Current scale of the ndCircle
 
 now => time last_ndCircle_time;
-Math.random2f(10.0, 20.0)::second => dur ndCircle_interval; // Interval between appearances
+Math.random2f(15.0, 40.0)::second => dur ndCircle_interval; // Interval between appearances
 5.0 => float ndCircle_lifespan; // ndCircle lifespan is 5 seconds
 5.0 => float ndCircle_shrink_duration; // Shrink duration is 5 seconds
 
@@ -495,7 +495,7 @@ while (true) {
         ndCircle_position => ndCircle_mesh.pos;
         ndCircle_size => ndCircle_scale; // Initialize ndCircle_scale
         ndCircle_scale => ndCircle_mesh.sca; // Set scale directly
-        @(1.0, 0.0, 0.0) => ndCircle_material.color; // Set ndCircle color to red for visibility
+        @(0, 0, 0) => ndCircle_material.color; // Set ndCircle color to red for visibility
 
         ndCircle_geo.build(1.0, 32, 0.0, 2 * Math.PI); // Build with unit size
     }
