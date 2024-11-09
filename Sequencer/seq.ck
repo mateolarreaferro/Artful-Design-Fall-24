@@ -42,7 +42,7 @@ GMesh frame_circle_mesh(frame_circle_geo, frame_circle_material) --> GG.scene();
 // Set frame circle position with adjusted z
 @(0.0, 0.0, frame_circle_z) => frame_circle_mesh.pos;
 
-frame_circle_geo.build(frame_circle_size, 32, 0.0, 2 * Math.PI);
+frame_circle_geo.build(frame_circle_size, 32, 0.0, 2.0 * Math.PI);
 @(0.0, 0.0, 0.0) => frame_circle_material.color;
 
 CircleGeometry center_circle_geo;
@@ -52,7 +52,7 @@ GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene
 // Set environment circle position with adjusted z
 @(circle_center.x, circle_center.y, env_circle_z) => center_circle_mesh.pos;
 
-center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI);
+center_circle_geo.build(current_circle_size, 32, 0.0, 2.0 * Math.PI);
 @(0.8, 0.8, 0.8) => center_circle_material.color;
 
 // Variables for the natural disaster circle
@@ -87,6 +87,69 @@ Math.random2f(15.0, 40.0)::second => dur ndCircle_interval; // Interval between 
 1.0 => float smallLifetime;  // For small-based
 0.5 => float tinyLifetime;   // For tiny-based
 
+// Maximum number of simultaneous voices
+10 => int MAX_VOICES;
+
+// List to keep track of active SndBufs
+SndBuf activeVoices[0];
+
+// Function to play a looping sound for a sphere
+fun void playLoopingSound(Sphere @ s) {
+    if (activeVoices.size() < MAX_VOICES) {
+        new SndBuf @=> s.sound;
+        s.sound => dac;
+        // Choose sound file based on size category
+        "" => string filename;
+        if (s.sizeCategory == 0) {
+            "samples/nl.wav" => filename;
+        } else if (s.sizeCategory == 1) {
+            "samples/sl.wav" => filename;
+        } else if (s.sizeCategory == 2) {
+            "samples/tl.wav" => filename;
+        } else {
+            "samples/nl.wav" => filename; // default
+        }
+        s.sound.read(filename);
+        s.sound.loop(1);
+        s.sound.rate(1.0);
+        s.sound.gain(1.0 / (activeVoices.size() + 1)); // Adjust gain
+        s.sound.play();
+
+        // Add to active voices
+        activeVoices << s.sound;
+
+        // Adjust gain for all active voices
+        0 => int i;
+        for (; i < activeVoices.size(); i++) {
+            activeVoices[i].gain(1.0 / activeVoices.size());
+        }
+    }
+}
+
+// Function to stop a sound associated with a sphere
+fun void stopLoopingSound(Sphere @ s) {
+    if (s.sound != null) {
+        s.sound.rate(0);
+        s.sound =< dac;
+        // Remove from active voices
+        0 => int i;
+        for (; i < activeVoices.size(); i++) {
+            if (activeVoices[i] == s.sound) {
+                activeVoices.erase(i);
+                break;
+            }
+        }
+        // Adjust gain for remaining active voices
+        if (activeVoices.size() > 0) {
+            0 => int j;
+            for (; j < activeVoices.size(); j++) {
+                activeVoices[j].gain(1.0 / activeVoices.size());
+            }
+        }
+        null @=> s.sound;
+    }
+}
+
 class Particle {
     FlatMaterial particle_mat;
     GMesh particle_mesh(particle_geo, particle_mat) --> GG.scene();
@@ -103,7 +166,7 @@ class Particle {
 Particle particles[PARTICLE_POOL_SIZE];
 
 fun float easeInOutCubic(float t) {
-    return (t < 0.5) ? (4 * t * t * t) : (1 - Math.pow(-2 * t + 2, 3) / 2);
+    return (t < 0.5) ? (4.0 * t * t * t) : (1.0 - Math.pow(-2.0 * t + 2.0, 3.0) / 2.0);
 }
 
 10 => float speedFactor;
@@ -117,6 +180,7 @@ class Sphere {
     int isBlue;
     int sizeCategory; // 0: normal, 1: small, 2: tiny
     int soundPlayed;  // Flag to track if dying sound has been played
+    SndBuf @ sound;   // Reference to the associated SndBuf
 
     // Modified init function to accept color and size category
     fun void init(vec3 pos, int color, float size, int category) {
@@ -129,6 +193,7 @@ class Sphere {
         0 => shrinking;
         category => sizeCategory;
         0 => soundPlayed; // Initialize soundPlayed to 0
+        null @=> sound;    // Initialize sound to null
 
         if (color == 1) {
             sphere_mesh.color(blue_color); // Blue
@@ -174,7 +239,7 @@ class ParticleSystem {
             }
 
             {
-                0.3 * (1 - Math.pow(((now - p.spawn_time) / second) / particle_lifetime, 0.2)) => p.particle_mesh.sca;
+                0.3 * (1.0 - Math.pow(((now - p.spawn_time) / second) / particle_lifetime, 0.2)) => p.particle_mesh.sca;
                 p.color + (end_color.val() - p.color) * Math.pow(((now - p.spawn_time) / second) / particle_lifetime, 0.5) => p.particle_mat.color;
                 (dt * p.direction).x * p.speed => p.particle_mesh.translateX;
                 (dt * p.direction).y * p.speed => p.particle_mesh.translateY;
@@ -190,7 +255,7 @@ class ParticleSystem {
             color => p.particle_mat.color;
             color => p.color;
 
-            Math.random2f(0, 2 * Math.PI) => float random_angle;
+            Math.random2f(0.0, 2.0 * Math.PI) => float random_angle;
             Math.cos(random_angle) => p.direction.x;
             Math.sin(random_angle) => p.direction.y;
 
@@ -210,11 +275,11 @@ class ParticleSystem {
             for (i + 1 => int j; j < spheres.size(); j++) {
                 spheres[j] @=> Sphere @ s2;
 
-                Math.sqrt(Math.pow(s1.position.x - s2.position.x, 2) + Math.pow(s1.position.y - s2.position.y, 2)) => float distance;
+                Math.sqrt(Math.pow(s1.position.x - s2.position.x, 2.0) + Math.pow(s1.position.y - s2.position.y, 2.0)) => float distance;
 
                 if (distance <= (s1.scale + s2.scale) * 0.8) {
                     vec3 collision_pos;
-                    (s1.position + s2.position) / 2 => collision_pos;
+                    (s1.position + s2.position) / 2.0 => collision_pos;
 
                     // Determine collision type
                     int collisionType;
@@ -281,9 +346,7 @@ class ParticleSystem {
                         spawnParticle(collision_pos, collision_color, particleSpeed, particleLife);
                     }
 
-                    // Sphere creation logic remains unchanged
-
-                    // Sphere creation logic for specific collisions (unchanged)
+                    // Sphere creation logic for specific collisions
                     if (collisionType == 0 &&
                         ((s1.isBlue == 1 && s2.isBlue == 0) || (s1.isBlue == 0 && s2.isBlue == 1)) &&
                         s1.shrinking == 0 && s2.shrinking == 0 &&
@@ -295,6 +358,9 @@ class ParticleSystem {
                         s1.scale * 0.6 => float newSize; // 40% smaller
                         newSphere.init(collision_pos, 1, newSize, 1); // Color=1(blue), size=newSize, sizeCategory=1 (small)
                         spheres << newSphere;
+
+                        // Play looping sound for the new sphere
+                        playLoopingSound(newSphere);
 
                         // Play bubble sound
                         spork ~ playBubbleSound();
@@ -323,6 +389,9 @@ class ParticleSystem {
                             newSphere.init(collision_pos, 1, newSize, 2); // Color=1(blue), size=newSize, sizeCategory=2 (tiny)
                             spheres << newSphere;
 
+                            // Play looping sound for the new sphere
+                            playLoopingSound(newSphere);
+
                             // Play bubble sound
                             spork ~ playBubbleSound();
 
@@ -336,7 +405,7 @@ class ParticleSystem {
             // Check if ndCircle is active and if sphere is inside ndCircle
             if (ndCircle_active == 1) {
                 // Calculate distance between sphere and ndCircle center
-                Math.sqrt(Math.pow(s1.position.x - ndCircle_position.x, 2) + Math.pow(s1.position.y - ndCircle_position.y, 2)) => float dist_to_ndCircle;
+                Math.sqrt(Math.pow(s1.position.x - ndCircle_position.x, 2.0) + Math.pow(s1.position.y - ndCircle_position.y, 2.0)) => float dist_to_ndCircle;
 
                 if (dist_to_ndCircle <= ndCircle_scale && s1.shrinking == 0) {
                     // Sphere is inside ndCircle, start shrinking
@@ -345,6 +414,8 @@ class ParticleSystem {
                         spork ~ playDyingSound();
                         1 => s1.soundPlayed;
                     }
+                    // Stop the looping sound
+                    stopLoopingSound(s1);
                 }
             }
 
@@ -359,7 +430,7 @@ class ParticleSystem {
 
             s1.position => s1.sphere_mesh.pos;
 
-            Math.sqrt(Math.pow(s1.position.x - circle_center.x, 2) + Math.pow(s1.position.y - circle_center.y, 2)) => float distanceFromCenter;
+            Math.sqrt(Math.pow(s1.position.x - circle_center.x, 2.0) + Math.pow(s1.position.y - circle_center.y, 2.0)) => float distanceFromCenter;
 
             if (distanceFromCenter > circle_size && s1.shrinking == 0) {
                 1 => s1.shrinking;
@@ -367,15 +438,19 @@ class ParticleSystem {
                     spork ~ playDyingSound();
                     1 => s1.soundPlayed;
                 }
+                // Stop the looping sound
+                stopLoopingSound(s1);
             }
 
             if (s1.shrinking == 1) {
                 s1.scale - (dt * 0.5) => s1.scale;
-                if (s1.scale <= 0) {
-                    0 => s1.scale;
+                if (s1.scale <= 0.0) {
+                    0.0 => s1.scale;
                     s1.scale => s1.sphere_mesh.sca;
                     s1.sphere_mesh.detach();
                     null @=> s1.sphere_mesh;
+                    // Ensure the looping sound is stopped
+                    stopLoopingSound(s1);
                     spheres.erase(i);
                     i--;
                     continue;
@@ -392,9 +467,9 @@ ps.init(current_circle_size);
 // Function to smoothly adjust the circle size using a cosine function
 fun void updateCircleSize() {
     sin_time + (sin_speed * GG.dt()) => sin_time;
-    base_circle_size - ((base_circle_size - min_circle_size) / 2) * (1 + Math.cos(sin_time)) => current_circle_size;
+    base_circle_size - ((base_circle_size - min_circle_size) / 2.0) * (1.0 + Math.cos(sin_time)) => current_circle_size;
     current_circle_size => ps.circle_size;
-    center_circle_geo.build(current_circle_size, 32, 0.0, 2 * Math.PI);
+    center_circle_geo.build(current_circle_size, 32, 0.0, 2.0 * Math.PI);
 }
 
 // Function to play bubble sound
@@ -452,11 +527,14 @@ while (true) {
             Sphere @ s;
             new Sphere @=> s;
             // Randomly assign color
-            (Math.random2f(0, 1) < 0.5) ? 1 : 0 => int color; // 1 for blue, 0 for yellow
+            (Math.random2f(0.0, 1.0) < 0.5) ? 1 : 0 => int color; // 1 for blue, 0 for yellow
             0.25 => float size; // Base size
             0 => int category; // 0: normal
             s.init(worldPos, color, size, category);
             spheres << s;
+
+            // Play looping sound for the new sphere
+            playLoopingSound(s);
 
             // Play bubble sound
             spork ~ playBubbleSound();
@@ -481,8 +559,8 @@ while (true) {
         current_circle_size / 4.0 + Math.random2f(0.0, current_circle_size / 4.0) => ndCircle_size;
 
         // Random position within envCircle
-        Math.random2f(0, 2 * Math.PI) => float angle;
-        Math.random2f(0, (current_circle_size - ndCircle_size)) => float radius;
+        Math.random2f(0.0, 2.0 * Math.PI) => float angle;
+        Math.random2f(0.0, (current_circle_size - ndCircle_size)) => float radius;
         circle_center.x + radius * Math.cos(angle) => ndCircle_position.x;
         circle_center.y + radius * Math.sin(angle) => ndCircle_position.y;
         nd_circle_z => ndCircle_position.z; // Set ndCircle z position
@@ -495,9 +573,9 @@ while (true) {
         ndCircle_position => ndCircle_mesh.pos;
         ndCircle_size => ndCircle_scale; // Initialize ndCircle_scale
         ndCircle_scale => ndCircle_mesh.sca; // Set scale directly
-        @(0, 0, 0) => ndCircle_material.color; // Set ndCircle color to red for visibility
+        @(0.0, 0.0, 0.0) => ndCircle_material.color; // Set ndCircle color to black for visibility
 
-        ndCircle_geo.build(1.0, 32, 0.0, 2 * Math.PI); // Build with unit size
+        ndCircle_geo.build(1.0, 32, 0.0, 2.0 * Math.PI); // Build with unit size
     }
 
     // Update ndCircle if active
