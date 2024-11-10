@@ -101,7 +101,9 @@ fun void playLoopingSound(Sphere @ s) {
         // Choose sound file based on size category
         "" => string filename;
         if (s.sizeCategory == 0) {
-            "samples/nl.wav" => filename;
+            // Randomly select a file from "samples/normal/normal_1.wav" to "samples/normal/normal_8.wav"
+            Math.random2(1, 9) => int randIndex; // Random integer between 1 and 8 inclusive
+            "samples/normal/normal_" + randIndex + ".wav" => filename;
         } else if (s.sizeCategory == 1) {
             "samples/sl.wav" => filename;
         } else if (s.sizeCategory == 2) {
