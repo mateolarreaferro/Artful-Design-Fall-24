@@ -512,6 +512,10 @@ fun void playDyingSound() {
     buffer =< dac;
 }
 
+// Declare variables for beat sound
+SndBuf @ beatBuffer;
+0 => int beatPlaying;
+
 while (true) {
     GG.nextFrame() => now;
 
@@ -597,5 +601,24 @@ while (true) {
             }
             ndCircle_scale => ndCircle_mesh.sca; // Set scale directly
         }
+    }
+
+    // Check the number of spheres and play beat sound if necessary
+    if (spheres.size() >= 10 && beatPlaying == 0) {
+        // Start playing beat
+        new SndBuf @=> beatBuffer;
+        beatBuffer.read("samples/beat.wav");
+        beatBuffer.loop(1);
+        beatBuffer => dac;
+        beatBuffer.play();
+        1 => beatPlaying;
+    } else if (spheres.size() < 10 && beatPlaying == 1) {
+        // Stop playing beat
+        if (beatBuffer != null) {
+            beatBuffer.rate(0);
+            beatBuffer =< dac;
+            null @=> beatBuffer;
+        }
+        0 => beatPlaying;
     }
 }
