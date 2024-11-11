@@ -1,6 +1,10 @@
 // Set up the camera and background color
 GG.camera().orthographic();
-@(1.0, 0.063, 0.122) => GG.scene().backgroundColor;
+@(1, 1, 1) => GG.scene().backgroundColor;
+
+0 => float bg_time; // Initialize background time
+(2.0 * Math.PI) / 60.0 => float bg_omega; // Angular frequency for a 60-second cycle
+
 
 GG.outputPass() @=> OutputPass output_pass;
 GG.renderPass() --> BloomPass bloom_pass --> output_pass;
@@ -531,6 +535,19 @@ SndBuf @ beatBuffer;
 
 while (true) {
     GG.nextFrame() => now;
+    // Update background time
+    bg_time + GG.dt() => bg_time;
+
+    // Calculate the sine of the angular frequency times time
+    bg_omega * bg_time => float bg_angle;
+    Math.sin(bg_angle) => float sin_value;
+
+    // Map sine value from [-1,1] to [0,1] for brightness
+    (sin_value + 1.0) / 2.0 => float brightness;
+
+    // Set the background color using the calculated brightness
+    @(brightness, brightness, brightness) => GG.scene().backgroundColor;
+
 
     if (GWindow.mouseLeft()) {
         if (now - last_spawn_time >= cooldown_duration) {
