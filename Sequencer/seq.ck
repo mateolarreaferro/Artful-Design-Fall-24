@@ -16,6 +16,7 @@ UI_Float3 end_color(@(1.0, 0.063, 0.122));
 UI_Float lifetime(2.0);
 UI_Float3 background_color(GG.scene().backgroundColor());
 CircleGeometry particle_geo;
+particle_geo.build(1.0, 64, 0.0, 2.0 * Math.PI); // Using 64 segments for smoother particles
 
 0.2::second => dur cooldown_duration;
 now => time last_spawn_time;
@@ -42,7 +43,7 @@ GMesh frame_circle_mesh(frame_circle_geo, frame_circle_material) --> GG.scene();
 // Set frame circle position with adjusted z
 @(0.0, 0.0, frame_circle_z) => frame_circle_mesh.pos;
 
-frame_circle_geo.build(frame_circle_size, 32, 0.0, 2.0 * Math.PI);
+frame_circle_geo.build(frame_circle_size, 64, 0.0, 2.0 * Math.PI); // Increased segments to 64
 @(0.0, 0.0, 0.0) => frame_circle_material.color;
 
 CircleGeometry center_circle_geo;
@@ -52,7 +53,7 @@ GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene
 // Set environment circle position with adjusted z
 @(circle_center.x, circle_center.y, env_circle_z) => center_circle_mesh.pos;
 
-center_circle_geo.build(current_circle_size, 32, 0.0, 2.0 * Math.PI);
+center_circle_geo.build(current_circle_size, 64, 0.0, 2.0 * Math.PI); // Increased segments to 64
 @(0.8, 0.8, 0.8) => center_circle_material.color;
 
 // Variables for the natural disaster circle
@@ -174,7 +175,9 @@ fun float easeInOutCubic(float t) {
 10 => float speedFactor;
 
 class Sphere {
-    GSphere @ sphere_mesh;
+    SphereGeometry @ sphere_geo;
+    FlatMaterial @ sphere_mat;
+    GMesh @ sphere_mesh;
     vec3 position;
     vec3 target_position;
     float scale;
@@ -186,7 +189,12 @@ class Sphere {
 
     // Modified init function to accept color and size category
     fun void init(vec3 pos, int color, float size, int category) {
-        new GSphere @=> sphere_mesh;
+        new SphereGeometry @=> sphere_geo;
+        // Corrected build call with all required arguments
+        sphere_geo.build(1.0, 64, 64, 0.0, 2.0 * Math.PI, 0.0, Math.PI);
+        new FlatMaterial @=> sphere_mat;
+        sphere_mat.color((color == 1) ? blue_color : yellow_color);
+        new GMesh(sphere_geo, sphere_mat) @=> sphere_mesh;
         sphere_mesh --> GG.scene();
         size => scale => sphere_mesh.sca;
         pos => position;
@@ -198,10 +206,8 @@ class Sphere {
         null @=> sound;    // Initialize sound to null
 
         if (color == 1) {
-            sphere_mesh.color(blue_color); // Blue
             1 => isBlue;
         } else {
-            sphere_mesh.color(yellow_color); // Yellow
             0 => isBlue;
         }
     }
@@ -254,8 +260,13 @@ class ParticleSystem {
         if (num_active < PARTICLE_POOL_SIZE) {
             particles[num_active] @=> Particle p;
 
-            color => p.particle_mat.color;
-            color => p.color;
+            // Randomize color slightly
+            vec3 random_variation;
+            Math.random2f(-0.05, 0.05) => random_variation.x;
+            Math.random2f(-0.05, 0.05) => random_variation.y;
+            Math.random2f(-0.05, 0.05) => random_variation.z;
+            color + random_variation => p.color;
+            p.color => p.particle_mat.color;
 
             Math.random2f(0.0, 2.0 * Math.PI) => float random_angle;
             Math.cos(random_angle) => p.direction.x;
@@ -471,7 +482,7 @@ fun void updateCircleSize() {
     sin_time + (sin_speed * GG.dt()) => sin_time;
     base_circle_size - ((base_circle_size - min_circle_size) / 2.0) * (1.0 + Math.cos(sin_time)) => current_circle_size;
     current_circle_size => ps.circle_size;
-    center_circle_geo.build(current_circle_size, 32, 0.0, 2.0 * Math.PI);
+    center_circle_geo.build(current_circle_size, 64, 0.0, 2.0 * Math.PI); // Increased segments to 64
 }
 
 // Function to play bubble sound
@@ -581,7 +592,7 @@ while (true) {
         ndCircle_scale => ndCircle_mesh.sca; // Set scale directly
         @(0.0, 0.0, 0.0) => ndCircle_material.color; // Set ndCircle color to black for visibility
 
-        ndCircle_geo.build(1.0, 32, 0.0, 2.0 * Math.PI); // Build with unit size
+        ndCircle_geo.build(1.0, 64, 0.0, 2.0 * Math.PI); // Build with unit size and increased segments
     }
 
     // Update ndCircle if active
