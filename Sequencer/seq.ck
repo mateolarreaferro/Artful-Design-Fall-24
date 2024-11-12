@@ -223,6 +223,12 @@ class Sphere {
 
 Sphere @ spheres[0];
 
+// Variables for collision sound cooldown
+time last_collision_sound_time;
+dur collision_sound_cooldown;
+now - 0.5::second => last_collision_sound_time; // Initialize to allow immediate sound
+0.5::second => collision_sound_cooldown; // Cooldown duration
+
 class ParticleSystem {
     0 => int num_active;
     float circle_size;
@@ -368,8 +374,11 @@ class ParticleSystem {
                         spawnParticle(collision_pos, collision_color, particleSpeed, particleLife);
                     }
 
-                    // Play random collision sound
-                    spork ~ playCollisionSound();
+                    // Play collision sound if cooldown has passed
+                    if (now - last_collision_sound_time >= collision_sound_cooldown) {
+                        spork ~ playCollisionSound();
+                        now => last_collision_sound_time;
+                    }
 
                     // Sphere creation logic for specific collisions
                     if (collisionType == 0 &&
@@ -570,12 +579,15 @@ fun void playNdCircleSound() {
 fun void playCollisionSound() {
     SndBuf buffer => dac;
 
-    // Randomly select a collision sound from "samples/collisions/1.mp3" to "samples/collisions/9.mp3"
-    Math.random2(1, 9) => int randIndex; // Random integer between 1 and 9 inclusive
-    "samples/collisions/" + randIndex + ".mp3" => string filename;
+    // Randomly select a collision sound from "samples/collisions/1.wav" to "samples/collisions/9.wav"
+    Math.random2(1, 10) => int randIndex; // Random integer between 1 and 9 inclusive
+    "samples/collisions/" + randIndex + ".wav" => string filename;
 
     // Load the sound file
     buffer.read(filename);
+
+    // Set volume to 0.1
+    buffer.gain(0.1);
 
     // Reset position to the beginning
     0 => buffer.pos;
@@ -726,7 +738,7 @@ while (true) {
         new SndBuf @=> peopleBuffer;
         peopleBuffer.read("samples/people.wav");
         peopleBuffer.loop(1);
-        peopleBuffer.gain(0.2); // Set volume to 0.2
+        peopleBuffer.gain(0.05); // Set volume to 0.05
         peopleBuffer => dac;
         peopleBuffer.play();
         1 => peoplePlaying;
