@@ -5,7 +5,6 @@ GG.camera().orthographic();
 0 => float bg_time; // Initialize background time
 (2.0 * Math.PI) / 60.0 => float bg_omega; // Angular frequency for a 60-second cycle
 
-
 GG.outputPass() @=> OutputPass output_pass;
 GG.renderPass() --> BloomPass bloom_pass --> output_pass;
 bloom_pass.input(GG.renderPass().colorOutput());
@@ -25,7 +24,8 @@ particle_geo.build(1.0, 64, 0.0, 2.0 * Math.PI); // Using 64 segments for smooth
 0.2::second => dur cooldown_duration;
 now => time last_spawn_time;
 
-3 => float base_circle_size;
+// Adjusted sizes to be 20% smaller
+3 * 0.8 => float base_circle_size;
 base_circle_size => float current_circle_size;
 0.3 * base_circle_size => float min_circle_size;
 0.0 => float sin_time;
@@ -76,9 +76,10 @@ Math.random2f(15.0, 40.0)::second => dur ndCircle_interval; // Interval between 
 5.0 => float ndCircle_shrink_duration; // Shrink duration is 5 seconds
 
 // Define colors
-@(0.2, 0.396, 0.541) => vec3 blue_color;
+@(1.0, 0.063, 0.122) => vec3 blue_color; // Changed blue_color to specified color
 @(0.965, 0.682, 0.176) => vec3 yellow_color;
-@(0.5, 0.0, 0.5) => vec3 purple_color;
+// Changed purple_color to cyan
+@(0.0, 1.0, 1.0) => vec3 purple_color;
 @(1.0, 0.5, 0.0) => vec3 orange_color; // Added orange color
 @(1.0, 0.0, 1.0) => vec3 pink_color;
 @(0.0, 1.0, 0.0) => vec3 green_color;
@@ -190,6 +191,7 @@ class Sphere {
     int sizeCategory; // 0: normal, 1: small, 2: tiny
     int soundPlayed;  // Flag to track if dying sound has been played
     SndBuf @ sound;   // Reference to the associated SndBuf
+    time spawn_time;  // Time when sphere was instantiated
 
     // Modified init function to accept color and size category
     fun void init(vec3 pos, int color, float size, int category) {
@@ -200,7 +202,8 @@ class Sphere {
         sphere_mat.color((color == 1) ? blue_color : yellow_color);
         new GMesh(sphere_geo, sphere_mat) @=> sphere_mesh;
         sphere_mesh --> GG.scene();
-        size => scale => sphere_mesh.sca;
+        size => scale;
+        0.0 => sphere_mesh.sca; // Start with zero scale
         pos => position;
         pos => sphere_mesh.pos;
         pos => target_position;
@@ -208,6 +211,7 @@ class Sphere {
         category => sizeCategory;
         0 => soundPlayed; // Initialize soundPlayed to 0
         null @=> sound;    // Initialize sound to null
+        now => spawn_time; // Record spawn time
 
         if (color == 1) {
             1 => isBlue;
@@ -372,7 +376,7 @@ class ParticleSystem {
                         // Instantiate a smaller blue sphere at collision position
                         Sphere @ newSphere;
                         new Sphere @=> newSphere;
-                        s1.scale * 0.6 => float newSize; // 40% smaller
+                        s1.scale * 0.6 * 0.8 => float newSize; // 40% smaller, then reduced by 20%
                         newSphere.init(collision_pos, 1, newSize, 1); // Color=1(blue), size=newSize, sizeCategory=1 (small)
                         spheres << newSphere;
 
@@ -402,7 +406,7 @@ class ParticleSystem {
                                 s2.scale => normalScale;
                             }
 
-                            normalScale * 0.4 => float newSize; // 60% smaller than normal sphere
+                            normalScale * 0.4 * 0.8 => float newSize; // 60% smaller than normal sphere, then reduced by 20%
                             newSphere.init(collision_pos, 1, newSize, 2); // Color=1(blue), size=newSize, sizeCategory=2 (tiny)
                             spheres << newSphere;
 
@@ -446,6 +450,15 @@ class ParticleSystem {
             ease_factor * (s1.target_position.y - s1.position.y) * speedFactor + s1.position.y => s1.position.y;
 
             s1.position => s1.sphere_mesh.pos;
+
+            // Scaling effect during first 0.5 seconds
+            if (now - s1.spawn_time < 0.5::second) {
+                ((now - s1.spawn_time) / 0.5::second) => float t;
+                easeInOutCubic(t) => float scale_factor;
+                s1.scale * scale_factor => s1.sphere_mesh.sca;
+            } else if (s1.shrinking == 0) {
+                s1.scale => s1.sphere_mesh.sca;
+            }
 
             Math.sqrt(Math.pow(s1.position.x - circle_center.x, 2.0) + Math.pow(s1.position.y - circle_center.y, 2.0)) => float distanceFromCenter;
 
@@ -562,7 +575,7 @@ while (true) {
             new Sphere @=> s;
             // Randomly assign color
             (Math.random2f(0.0, 1.0) < 0.5) ? 1 : 0 => int color; // 1 for blue, 0 for yellow
-            0.25 => float size; // Base size
+            0.25 * 0.8 => float size; // Base size reduced by 20%
             0 => int category; // 0: normal
             s.init(worldPos, color, size, category);
             spheres << s;
@@ -608,6 +621,7 @@ while (true) {
         ndCircle_size => ndCircle_scale; // Initialize ndCircle_scale
         ndCircle_scale => ndCircle_mesh.sca; // Set scale directly
         @(0.0, 0.0, 0.0) => ndCircle_material.color; // Set ndCircle color to black for visibility
+        // add sfx here
 
         ndCircle_geo.build(1.0, 64, 0.0, 2.0 * Math.PI); // Build with unit size and increased segments
     }
