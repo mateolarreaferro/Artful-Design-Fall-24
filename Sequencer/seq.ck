@@ -579,14 +579,14 @@ fun void playNdCircleSound() {
 fun void playCollisionSound() {
     SndBuf buffer => dac;
 
-    // Randomly select a collision sound from "samples/collisions/1.wav" to "samples/collisions/9.wav"
-    Math.random2(1, 14) => int randIndex; // Random integer between 1 and 9 inclusive
+    // Randomly select a collision sound from "samples/collisions/1.wav" to "samples/collisions/14.wav"
+    Math.random2(1, 15) => int randIndex; // Random integer between 1 and 14 inclusive
     "samples/collisions/" + randIndex + ".wav" => string filename;
 
     // Load the sound file
     buffer.read(filename);
 
-    // Set volume to 0.1
+    // Set volume to 0.25
     buffer.gain(0.25);
 
     // Reset position to the beginning
@@ -609,6 +609,17 @@ SndBuf @ beatBuffer;
 // Declare variables for people sound
 SndBuf @ peopleBuffer;
 0 => int peoplePlaying;
+
+// **Declare variable for daynightcycle sound**
+SndBuf @ daynightBuffer;
+
+// **Initialize daynightcycle sound**
+new SndBuf @=> daynightBuffer;
+daynightBuffer.read("samples/daynightcycle.wav");
+daynightBuffer.loop(1);
+daynightBuffer.gain(0.15);
+daynightBuffer => dac;
+daynightBuffer.play();
 
 while (true) {
     GG.nextFrame() => now;
