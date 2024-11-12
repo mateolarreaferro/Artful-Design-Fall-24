@@ -255,7 +255,8 @@ class ParticleSystem {
             }
 
             {
-                0.3 * (1.0 - Math.pow(((now - p.spawn_time) / second) / particle_lifetime, 0.2)) => p.particle_mesh.sca;
+                // Adjusted scale to make particles 75% smaller
+                0.075 * (1.0 - Math.pow(((now - p.spawn_time) / second) / particle_lifetime, 0.2)) => p.particle_mesh.sca;
                 p.color + (end_color.val() - p.color) * Math.pow(((now - p.spawn_time) / second) / particle_lifetime, 0.5) => p.particle_mat.color;
                 (dt * p.direction).x * p.speed => p.particle_mesh.translateX;
                 (dt * p.direction).y * p.speed => p.particle_mesh.translateY;
