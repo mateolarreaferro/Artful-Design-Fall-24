@@ -529,7 +529,7 @@ fun void playDyingSound() {
     SndBuf buffer => dac;
 
     // Load the sound file
-    buffer.read("samples/dying.wav");
+    buffer.read("samples/bubble.wav");
 
     // Reset position to the beginning
     0 => buffer.pos;
