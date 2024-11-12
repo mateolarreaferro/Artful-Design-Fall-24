@@ -580,14 +580,14 @@ fun void playCollisionSound() {
     SndBuf buffer => dac;
 
     // Randomly select a collision sound from "samples/collisions/1.wav" to "samples/collisions/9.wav"
-    Math.random2(1, 10) => int randIndex; // Random integer between 1 and 9 inclusive
+    Math.random2(1, 14) => int randIndex; // Random integer between 1 and 9 inclusive
     "samples/collisions/" + randIndex + ".wav" => string filename;
 
     // Load the sound file
     buffer.read(filename);
 
     // Set volume to 0.1
-    buffer.gain(0.1);
+    buffer.gain(0.25);
 
     // Reset position to the beginning
     0 => buffer.pos;
@@ -719,6 +719,7 @@ while (true) {
         new SndBuf @=> beatBuffer;
         beatBuffer.read("samples/beat.wav");
         beatBuffer.loop(1);
+        beatBuffer.gain(0.5);
         beatBuffer => dac;
         beatBuffer.play();
         1 => beatPlaying;
@@ -738,7 +739,7 @@ while (true) {
         new SndBuf @=> peopleBuffer;
         peopleBuffer.read("samples/people.wav");
         peopleBuffer.loop(1);
-        peopleBuffer.gain(0.05); // Set volume to 0.05
+        peopleBuffer.gain(0.05); 
         peopleBuffer => dac;
         peopleBuffer.play();
         1 => peoplePlaying;
