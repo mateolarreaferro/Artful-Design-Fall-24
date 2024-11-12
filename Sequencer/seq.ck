@@ -94,7 +94,7 @@ Math.random2f(15.0, 40.0)::second => dur ndCircle_interval; // Interval between 
 0.5 => float tinyLifetime;   // For tiny-based
 
 // Maximum number of simultaneous voices
-10 => int MAX_VOICES;
+30 => int MAX_VOICES;
 
 // List to keep track of active SndBufs
 SndBuf activeVoices[0];
@@ -107,15 +107,16 @@ fun void playLoopingSound(Sphere @ s) {
         // Choose sound file based on size category
         "" => string filename;
         if (s.sizeCategory == 0) {
-            // Randomly select a file from "samples/normal/normal_1.wav" to "samples/normal/normal_8.wav"
-            Math.random2(1, 40) => int randIndex; // Random integer between 1 and 8 inclusive
+            Math.random2(1, 40) => int randIndex; // 40 samples atm
             "samples/normal/" + randIndex + ".wav" => filename;
         } else if (s.sizeCategory == 1) {
-            "samples/sl.wav" => filename;
+            Math.random2(1, 3) => int randIndex;
+            "samples/small/" + randIndex + ".wav" => filename;
         } else if (s.sizeCategory == 2) {
-            "samples/tl.wav" => filename;
+            Math.random2(1, 5) => int randIndex;
+            "samples/tiny/" + randIndex + ".wav" => filename;
         } else {
-            "samples/nl.wav" => filename; // default
+            "samples/nl.wav" => filename; 
         }
         s.sound.read(filename);
         s.sound.loop(1);
