@@ -113,7 +113,7 @@ fun void playLoopingSound(Sphere @ s) {
             Math.random2(1, 3) => int randIndex;
             "samples/small/" + randIndex + ".wav" => filename;
         } else if (s.sizeCategory == 2) {
-            Math.random2(1, 5) => int randIndex;
+            Math.random2(1, 8) => int randIndex;
             "samples/tiny/" + randIndex + ".wav" => filename;
         } else {
             "samples/nl.wav" => filename; 
