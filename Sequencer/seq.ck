@@ -11,7 +11,7 @@ bloom_pass.input(GG.renderPass().colorOutput());
 output_pass.input(bloom_pass.colorOutput());
 
 1.0 => bloom_pass.intensity;
-0.1 => bloom_pass.radius;
+0.3 => bloom_pass.radius;
 0.5 => bloom_pass.threshold;
 
 UI_Float3 start_color(@(1.0, 0.063, 0.122));
@@ -108,8 +108,8 @@ fun void playLoopingSound(Sphere @ s) {
         "" => string filename;
         if (s.sizeCategory == 0) {
             // Randomly select a file from "samples/normal/normal_1.wav" to "samples/normal/normal_8.wav"
-            Math.random2(1, 9) => int randIndex; // Random integer between 1 and 8 inclusive
-            "samples/normal/normal_" + randIndex + ".wav" => filename;
+            Math.random2(1, 40) => int randIndex; // Random integer between 1 and 8 inclusive
+            "samples/normal/" + randIndex + ".wav" => filename;
         } else if (s.sizeCategory == 1) {
             "samples/sl.wav" => filename;
         } else if (s.sizeCategory == 2) {
