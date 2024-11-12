@@ -93,7 +93,7 @@ Math.random2f(15.0, 40.0)::second => dur ndCircle_interval; // Interval between 
 0.5 => float tinyLifetime;   // For tiny-based
 
 // Maximum number of simultaneous voices
-30 => int MAX_VOICES;
+40 => int MAX_VOICES;
 
 // List to keep track of active SndBufs
 SndBuf activeVoices[0];
@@ -109,7 +109,7 @@ fun void playLoopingSound(Sphere @ s) {
             Math.random2(1, 40) => int randIndex; // 40 samples atm
             "samples/normal/" + randIndex + ".wav" => filename;
         } else if (s.sizeCategory == 1) {
-            Math.random2(1, 3) => int randIndex;
+            Math.random2(1, 7) => int randIndex;
             "samples/small/" + randIndex + ".wav" => filename;
         } else if (s.sizeCategory == 2) {
             Math.random2(1, 8) => int randIndex;
@@ -610,6 +610,14 @@ SndBuf @ beatBuffer;
 SndBuf @ peopleBuffer;
 0 => int peoplePlaying;
 
+// Declare variables for people sound
+SndBuf @ meditationBuffer;
+0 => int meditationPlaying;
+
+// Declare variables for people sound
+SndBuf @ cityBuffer;
+0 => int cityPlaying;
+
 // **Declare variable for daynightcycle sound**
 SndBuf @ daynightBuffer;
 
@@ -725,42 +733,83 @@ while (true) {
     }
 
     // Check the number of spheres and play beat sound if necessary
-    if (spheres.size() >= 10 && beatPlaying == 0) {
-        // Start playing beat
-        new SndBuf @=> beatBuffer;
-        beatBuffer.read("samples/beat.wav");
-        beatBuffer.loop(1);
-        beatBuffer.gain(0.5);
-        beatBuffer => dac;
-        beatBuffer.play();
-        1 => beatPlaying;
-    } else if (spheres.size() < 10 && beatPlaying == 1) {
-        // Stop playing beat
-        if (beatBuffer != null) {
-            beatBuffer.rate(0);
-            beatBuffer =< dac;
-            null @=> beatBuffer;
-        }
-        0 => beatPlaying;
+if (spheres.size() >= 10 && beatPlaying == 0) {
+    // Start playing beat
+    new SndBuf @=> beatBuffer;
+    beatBuffer.read("samples/beat.wav");
+    beatBuffer.loop(1);
+    beatBuffer.gain(0.5);
+    beatBuffer => dac;
+    beatBuffer.play();
+    1 => beatPlaying;
+} else if (spheres.size() < 10 && beatPlaying == 1) {
+    // Stop playing beat
+    if (beatBuffer != null) {
+        beatBuffer.rate(0);
+        beatBuffer =< dac;
+        null @=> beatBuffer;
     }
+    0 => beatPlaying;
+}
 
-    // Check the number of spheres and play people sound if necessary
-    if (spheres.size() >= 5 && peoplePlaying == 0) {
-        // Start playing people sound
-        new SndBuf @=> peopleBuffer;
-        peopleBuffer.read("samples/people.wav");
-        peopleBuffer.loop(1);
-        peopleBuffer.gain(0.05); 
-        peopleBuffer => dac;
-        peopleBuffer.play();
-        1 => peoplePlaying;
-    } else if (spheres.size() < 5 && peoplePlaying == 1) {
-        // Stop playing people sound
-        if (peopleBuffer != null) {
-            peopleBuffer.rate(0);
-            peopleBuffer =< dac;
-            null @=> peopleBuffer;
-        }
-        0 => peoplePlaying;
+// Check the number of spheres and play people sound if necessary
+if (spheres.size() >= 5 && peoplePlaying == 0) {
+    // Start playing people sound
+    new SndBuf @=> peopleBuffer;
+    peopleBuffer.read("samples/people.wav");
+    peopleBuffer.loop(1);
+    peopleBuffer.gain(0.05); 
+    peopleBuffer => dac;
+    peopleBuffer.play();
+    1 => peoplePlaying;
+} else if (spheres.size() < 5 && peoplePlaying == 1) {
+    // Stop playing people sound
+    if (peopleBuffer != null) {
+        peopleBuffer.rate(0);
+        peopleBuffer =< dac;
+        null @=> peopleBuffer;
     }
+    0 => peoplePlaying;
+}
+
+// Check the number of spheres and play meditation sound if necessary
+if (spheres.size() >= 7 && meditationPlaying == 0) {
+    // Start playing meditation sound
+    new SndBuf @=> meditationBuffer;
+    meditationBuffer.read("samples/meditation.wav");
+    meditationBuffer.loop(1);
+    meditationBuffer.gain(0.3); 
+    meditationBuffer => dac;
+    meditationBuffer.play();
+    1 => meditationPlaying;
+} else if (spheres.size() < 7 && meditationPlaying == 1) {
+    // Stop playing meditation sound
+    if (meditationBuffer != null) {
+        meditationBuffer.rate(0);
+        meditationBuffer =< dac;
+        null @=> meditationBuffer;
+    }
+    0 => meditationPlaying;
+}
+
+// Check the number of spheres and play city sound if necessary
+if (spheres.size() >= 15 && cityPlaying == 0) {
+    // Start playing city sound
+    new SndBuf @=> cityBuffer;
+    cityBuffer.read("samples/city.wav");
+    cityBuffer.loop(1);
+    cityBuffer.gain(0.06); 
+    cityBuffer => dac;
+    cityBuffer.play();
+    1 => cityPlaying;
+} else if (spheres.size() < 15 && cityPlaying == 1) {
+    // Stop playing city sound
+    if (cityBuffer != null) {
+        cityBuffer.rate(0);
+        cityBuffer =< dac;
+        null @=> cityBuffer;
+    }
+    0 => cityPlaying;
+}
+
 }
