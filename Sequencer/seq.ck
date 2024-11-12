@@ -78,8 +78,7 @@ Math.random2f(15.0, 40.0)::second => dur ndCircle_interval; // Interval between 
 // Define colors
 @(1.0, 0.063, 0.122) => vec3 blue_color; // Changed blue_color to specified color
 @(0.965, 0.682, 0.176) => vec3 yellow_color;
-// Changed purple_color to cyan
-@(0.0, 1.0, 1.0) => vec3 purple_color;
+@(0.0, 1.0, 1.0) => vec3 purple_color; // Changed purple_color to cyan
 @(1.0, 0.5, 0.0) => vec3 orange_color; // Added orange color
 @(1.0, 0.0, 1.0) => vec3 pink_color;
 @(0.0, 1.0, 0.0) => vec3 green_color;
@@ -300,7 +299,7 @@ class ParticleSystem {
 
                 Math.sqrt(Math.pow(s1.position.x - s2.position.x, 2.0) + Math.pow(s1.position.y - s2.position.y, 2.0)) => float distance;
 
-                if (distance <= (s1.scale + s2.scale) * 0.8) {
+                if (distance <= (s1.scale + s2.scale) * 1.1) { // Increased collision sensitivity
                     vec3 collision_pos;
                     (s1.position + s2.position) / 2.0 => collision_pos;
 
@@ -368,6 +367,9 @@ class ParticleSystem {
                     for (0 => int k; k < 10; k++) {
                         spawnParticle(collision_pos, collision_color, particleSpeed, particleLife);
                     }
+
+                    // Play random collision sound
+                    spork ~ playCollisionSound();
 
                     // Sphere creation logic for specific collisions
                     if (collisionType == 0 &&
@@ -544,9 +546,57 @@ fun void playDyingSound() {
     buffer =< dac;
 }
 
+// Function to play ndCircle sound
+fun void playNdCircleSound() {
+    SndBuf buffer => dac;
+
+    // Load the sound file
+    buffer.read("samples/ndCircle.wav");
+
+    // Reset position to the beginning
+    0 => buffer.pos;
+
+    // Start playback
+    1 => buffer.play;
+
+    // Wait until the sound finishes
+    buffer.length() => now;
+
+    // Disconnect to clean up
+    buffer =< dac;
+}
+
+// Function to play random collision sound
+fun void playCollisionSound() {
+    SndBuf buffer => dac;
+
+    // Randomly select a collision sound from "samples/collisions/1.mp3" to "samples/collisions/9.mp3"
+    Math.random2(1, 9) => int randIndex; // Random integer between 1 and 9 inclusive
+    "samples/collisions/" + randIndex + ".mp3" => string filename;
+
+    // Load the sound file
+    buffer.read(filename);
+
+    // Reset position to the beginning
+    0 => buffer.pos;
+
+    // Start playback
+    1 => buffer.play;
+
+    // Wait until the sound finishes
+    buffer.length() => now;
+
+    // Disconnect to clean up
+    buffer =< dac;
+}
+
 // Declare variables for beat sound
 SndBuf @ beatBuffer;
 0 => int beatPlaying;
+
+// Declare variables for people sound
+SndBuf @ peopleBuffer;
+0 => int peoplePlaying;
 
 while (true) {
     GG.nextFrame() => now;
@@ -623,9 +673,11 @@ while (true) {
         ndCircle_size => ndCircle_scale; // Initialize ndCircle_scale
         ndCircle_scale => ndCircle_mesh.sca; // Set scale directly
         @(0.0, 0.0, 0.0) => ndCircle_material.color; // Set ndCircle color to black for visibility
-        // add sfx here
 
         ndCircle_geo.build(1.0, 64, 0.0, 2.0 * Math.PI); // Build with unit size and increased segments
+
+        // Play ndCircle sound
+        spork ~ playNdCircleSound();
     }
 
     // Update ndCircle if active
@@ -666,5 +718,25 @@ while (true) {
             null @=> beatBuffer;
         }
         0 => beatPlaying;
+    }
+
+    // Check the number of spheres and play people sound if necessary
+    if (spheres.size() >= 5 && peoplePlaying == 0) {
+        // Start playing people sound
+        new SndBuf @=> peopleBuffer;
+        peopleBuffer.read("samples/people.wav");
+        peopleBuffer.loop(1);
+        peopleBuffer.gain(0.2); // Set volume to 0.2
+        peopleBuffer => dac;
+        peopleBuffer.play();
+        1 => peoplePlaying;
+    } else if (spheres.size() < 5 && peoplePlaying == 1) {
+        // Stop playing people sound
+        if (peopleBuffer != null) {
+            peopleBuffer.rate(0);
+            peopleBuffer =< dac;
+            null @=> peopleBuffer;
+        }
+        0 => peoplePlaying;
     }
 }
