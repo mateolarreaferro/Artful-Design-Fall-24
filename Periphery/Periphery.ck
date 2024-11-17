@@ -2,6 +2,16 @@
 GG.camera().orthographic();
 @(0, 0, 0) => GG.scene().backgroundColor;
 
+
+GG.outputPass() @=> OutputPass output_pass;
+GG.renderPass() --> BloomPass bloom_pass --> output_pass;
+bloom_pass.input(GG.renderPass().colorOutput());
+output_pass.input(bloom_pass.colorOutput());
+
+1.0 => bloom_pass.intensity;
+0.3 => bloom_pass.radius;
+0.5 => bloom_pass.threshold;
+
 0 => float bg_time; // Initialize background time
 (2.0 * Math.PI) / 60.0 => float bg_omega; // Angular frequency for a 60-second cycle
 
@@ -9,7 +19,7 @@ GG.camera().orthographic();
 3.0 => float base_circle_size;
 0.3 * base_circle_size => float min_circle_size;
 0.0 => float sin_time;
-0.5 => float sin_speed;
+0.75 => float sin_speed;
 base_circle_size => float current_circle_size;
 
 vec3 circle_center;
