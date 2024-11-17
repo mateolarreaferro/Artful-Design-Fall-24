@@ -1,9 +1,6 @@
-// Import ChuGL
-Machine.add("chugl");
-
 // Set up the camera and background color
 GG.camera().orthographic();
-@(0.0, 0.0, 0.0) => GG.scene().backgroundColor;
+@(0, 0, 0) => GG.scene().backgroundColor; // Off-White background
 
 // Set up render passes
 GG.outputPass() @=> OutputPass output_pass;
@@ -16,31 +13,57 @@ output_pass.input(bloom_pass.colorOutput());
 0.5 => bloom_pass.threshold;
 
 // Number of background circles
-20 => int num_bg_circles;
+30 => int num_bg_circles;
 
 // Arrays to store background circles
 new GMesh[0] @=> GMesh bg_circle_meshes[];
 new CircleGeometry[0] @=> CircleGeometry bg_circle_geometries[];
 new FlatMaterial[0] @=> FlatMaterial bg_circle_materials[];
 
+// Additional arrays for colors and speeds
+new vec3[0] @=> vec3 bg_circle_colors[];
+new float[0] @=> float bg_circle_speeds[];
+
 // Z-position for background circles
--1.0 => float bg_circle_z;
+-0.5 => float bg_circle_z;
+
+// Initialize the minimalist_colors array
+new vec3[0] @=> vec3 minimalist_colors[];
+
+// Define minimalist and modern colors
+minimalist_colors << @(0.8, 0.8, 0.8);   // Soft Gray
+minimalist_colors << @(0.9, 0.9, 0.9);   // Light Gray
+minimalist_colors << @(0.7, 0.8, 0.9);   // Pale Blue
+minimalist_colors << @(0.6, 0.7, 0.8);   // Muted Blue
+minimalist_colors << @(0.7, 0.85, 0.75); // Mint Green
+minimalist_colors << @(0.9, 0.8, 0.8);   // Blush Pink
+minimalist_colors << @(0.8, 0.75, 0.9);  // Lavender
 
 // Create background circles
 for (0 => int i; i < num_bg_circles; i++) {
-    // Random size between 0.5 and 2.5
-    Std.rand2f(0.2, 0.8) => float circle_size;
+    // Random size between 0.2 and 1.3
+    Std.rand2f(0.5, 1.5) => float circle_size;
 
-    // Random position within a range (-5.0 to 5.0)
-    Std.rand2f(-6.0, 6.0) => float x_pos;
-    Std.rand2f(-6.0, 6.0) => float y_pos;
+    // Random position within a range (-4.0 to 4.0)
+    Std.rand2f(-5.5, 5.5) => float x_pos;
+    Std.rand2f(-5.5, 5.5) => float y_pos;
+
+    // Random speed factor for size oscillation
+    Std.rand2f(0.1, 0.5) => float speed_factor;
+    bg_circle_speeds << speed_factor;
+
+    // Random color from the minimalist_colors array
+    minimalist_colors.size() => int num_colors;
+    Std.rand2(0, num_colors - 1) => int color_index;
+    minimalist_colors[color_index] => vec3 circle_color;
+    bg_circle_colors << circle_color;
 
     // Create geometry and material
     CircleGeometry circle_geo;
     circle_geo.build(circle_size, 64, 0.0, 2.0 * pi);
 
     FlatMaterial circle_material;
-    @(0.8, 0.8, 0.8) => circle_material.color; // Light gray
+    circle_color => circle_material.color; // Assign color
 
     // Create mesh and add to scene
     GMesh circle_mesh;
@@ -55,71 +78,14 @@ for (0 => int i; i < num_bg_circles; i++) {
     bg_circle_materials << circle_material;
 }
 
-// Number of foreground circles
-0 => int num_fg_circles;
-
-// Arrays to store foreground circles
-new GMesh[0] @=> GMesh fg_circle_meshes[];
-new CircleGeometry[0] @=> CircleGeometry fg_circle_geometries[];
-new FlatMaterial[0] @=> FlatMaterial fg_circle_materials[];
-
-// Z-position for foreground circles
-0.0 => float fg_circle_z;
-
-// Speed and radius for motion
-0.5 => float speed;
-2.0 => float radius;
-
-// Create foreground circles
-for (0 => int i; i < num_fg_circles; i++) {
-    // Size of the circle
-    1.0 => float circle_size;
-
-    // Initial position
-    0.0 => float x_pos;
-    0.0 => float y_pos;
-
-    // Create geometry and material
-    CircleGeometry circle_geo;
-    circle_geo.build(circle_size, 64, 0.0, 2.0 * pi);
-
-    FlatMaterial circle_material;
-    @(1.0, 0.0, 0.0) => circle_material.color; // Red
-
-    // Create mesh and add to scene
-    GMesh circle_mesh;
-    circle_mesh.geometry(circle_geo);
-    circle_mesh.material(circle_material);
-    circle_mesh --> GG.scene(); // Add to the scene
-    @(x_pos, y_pos, fg_circle_z) => circle_mesh.pos;
-
-    // Add to arrays
-    fg_circle_meshes << circle_mesh;
-    fg_circle_geometries << circle_geo;
-    fg_circle_materials << circle_material;
-}
-
 // Main loop
 while (true) {
     GG.nextFrame() => now;
 
     // Update background circles
     for (0 => int i; i < num_bg_circles; i++) {
-        // Calculate new size based on time
-        0.5 * Math.sin(now / second * 0.5 + i) => float new_size;
+        // Calculate new size based on time and individual speed
+        0.8 + 0.2 * Math.sin(now / second * bg_circle_speeds[i] + i) => float new_size;
         bg_circle_geometries[i].build(new_size, 64, 0.0, 2.0 * pi);
-    }
-
-    // Update foreground circles
-    for (0 => int i; i < num_fg_circles; i++) {
-        // Calculate angle for circular motion
-        now / second * speed + i * (2.0 * pi / num_fg_circles) => float angle;
-
-        // Calculate position
-        Math.cos(angle) * radius => float x_pos;
-        Math.sin(angle) * radius => float y_pos;
-
-        // Update circle position
-        @(x_pos, y_pos, fg_circle_z) => fg_circle_meshes[i].pos;
     }
 }
