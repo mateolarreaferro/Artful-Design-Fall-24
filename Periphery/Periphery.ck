@@ -22,7 +22,7 @@ output_pass.input(bloom_pass.colorOutput());
 (2.0 * Math.PI) / 60.0 => float bg_omega; // Angular frequency for a 60-second cycle
 
 // Number of background circles
-0 => int num_bg_circles;
+10 => int num_bg_circles;
 
 // Arrays to store background circles
 new GMesh[0] @=> GMesh bg_circle_meshes[];
@@ -92,7 +92,7 @@ for (0 => int i; i < num_bg_circles; i++) {
 base_circle_size => float current_circle_size;
 0.3 * base_circle_size => float min_circle_size;
 0.0 => float sin_time;
-0.5 => float sin_speed;
+0.45 => float sin_speed;
 
 vec3 circle_center;
 circle_center.set(0.0, 0.0, 0.0);
@@ -178,10 +178,10 @@ fun void placePads() {
         pad --> padGroup;
 
         // Set transform
-        pad.sca(padSpacing * 0.7);
+        pad.sca(padSpacing * 0.4);
         pad.posY(padSpacing * i - frustrumHeight / 2.0 + padSpacing / 2.0);
         // Position pads on the left side
-        (-frustrumWidth / 2.0 + padSpacing * 0.8) => pad.posX;
+        (-frustrumWidth / 2.0 + padSpacing * 0.4) => pad.posX;
     }
     // Adjust padGroup position if needed
     padGroup.posX(0);  // Adjust if necessary
