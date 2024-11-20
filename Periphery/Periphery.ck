@@ -1,11 +1,11 @@
 //-----------------------------------------------------------------------------
-// name: integrated_script_with_pads.ck
-// desc: Script with integrated clickable pads as a side bar
+// name: Periphery.ck
+// Mateo Larrea
 //-----------------------------------------------------------------------------
 
 // Set up the camera and background color
 GG.camera().orthographic();
-@(1, 1, 1) => GG.scene().backgroundColor; // Start with white background
+@(0, 0, 0) => GG.scene().backgroundColor; // Start with white background
 
 // Set up render passes
 GG.outputPass() @=> OutputPass output_pass;
@@ -13,9 +13,9 @@ GG.renderPass() --> BloomPass bloom_pass --> output_pass;
 bloom_pass.input(GG.renderPass().colorOutput());
 output_pass.input(bloom_pass.colorOutput());
 
-1.0 => bloom_pass.intensity;
+1.5 => bloom_pass.intensity;
 0.3 => bloom_pass.radius;
-0.5 => bloom_pass.threshold;
+0.4 => bloom_pass.threshold;
 
 // Variables for background color modulation
 0 => float bg_time; // Initialize background time
@@ -44,7 +44,7 @@ minimalist_colors << @(0.8, 0.75, 0.9);  // Lavender
 base_circle_size => float current_circle_size;
 0.3 * base_circle_size => float min_circle_size;
 0.0 => float sin_time;
-0.45 => float sin_speed;
+0.5 => float sin_speed;
 
 vec3 circle_center;
 circle_center.set(0.0, 0.0, 0.0);
@@ -54,7 +54,7 @@ circle_center.set(0.0, 0.0, 0.0);
 0.0 => float env_circle_z;
 
 // Frame circle
-1.5 * base_circle_size => float frame_circle_size;
+2 * base_circle_size => float frame_circle_size;
 CircleGeometry frame_circle_geo;
 FlatMaterial frame_circle_material;
 GMesh frame_circle_mesh(frame_circle_geo, frame_circle_material) --> GG.scene();
@@ -96,7 +96,7 @@ spork ~ mouse.selfUpdate(); // start updating mouse position
 GGen padGroup --> GG.scene();
 
 // Number of pads
-4 => int NUM_PADS;
+5 => int NUM_PADS;
 
 // Array of pads
 GPad pads[NUM_PADS];
@@ -290,7 +290,7 @@ class GPad extends GGen {
                     0 => is_shrinking[i]; // Reset shrinking flag
                 } else {
                     new_size => bg_circle_current_sizes[i];
-                    bg_circle_geometries[i].build(new_size, 64, 0.0, 2.0 * Math.PI);
+                    bg_circle_geometries[i].build(new_size, 72, 0.0, 2.0 * Math.PI);
                 }
             }
         }
@@ -325,7 +325,7 @@ class GPad extends GGen {
 
             // Create geometry and material
             new CircleGeometry @=> bg_circle_geometries[i];
-            bg_circle_geometries[i].build(initial_size, 64, 0.0, 2.0 * Math.PI);
+            bg_circle_geometries[i].build(initial_size, 72, 0.0, 2.0 * Math.PI);
 
             new FlatMaterial @=> bg_circle_materials[i];
             circle_color => bg_circle_materials[i].color; // Assign color
