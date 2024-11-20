@@ -176,6 +176,7 @@ class GPad extends GGen {
     new float[5] @=> float bg_circle_growth_speeds[]; // Growth speeds for ease-in animation
     new vec3[5] @=> vec3 bg_circle_colors[];
     new float[5] @=> float bg_circle_speeds[];
+    new int[5] @=> int is_shrinking[]; // Track if a circle is shrinking
 
     // Constructor
     fun void init(Mouse @ m) {
@@ -235,7 +236,7 @@ class GPad extends GGen {
             else if (input == MOUSE_CLICK) {
                 if (state == ACTIVE) {
                     enter(NONE);
-                    clearCircles(); // Clear circles on pad deselect
+                    shrinkCircles(); // Shrink circles on pad deselect
                 } else {
                     enter(ACTIVE);
                     instantiateCircles(); // Instantiate circles on pad select
@@ -244,7 +245,7 @@ class GPad extends GGen {
         } else if (state == ACTIVE) {
             if (input == MOUSE_CLICK) {
                 enter(NONE);
-                clearCircles(); // Clear circles on pad deselect
+                shrinkCircles(); // Shrink circles on pad deselect
             }
         }
     }
@@ -268,9 +269,29 @@ class GPad extends GGen {
         // Update the growth of circles if active
         if (state == ACTIVE) {
             for (0 => int i; i < bg_circle_meshes.size(); i++) {
-                bg_circle_current_sizes[i] + bg_circle_growth_speeds[i] * (bg_circle_target_sizes[i] - bg_circle_current_sizes[i]) => float new_size;
-                new_size => bg_circle_current_sizes[i];
-                bg_circle_geometries[i].build(new_size, 64, 0.0, 2.0 * Math.PI);
+                if (is_shrinking[i] == 0 && bg_circle_meshes[i] != null) {
+                    bg_circle_current_sizes[i] + bg_circle_growth_speeds[i] * (bg_circle_target_sizes[i] - bg_circle_current_sizes[i]) => float new_size;
+                    new_size => bg_circle_current_sizes[i];
+                    bg_circle_geometries[i].build(new_size, 64, 0.0, 2.0 * Math.PI);
+                }
+            }
+        }
+
+        // Handle shrinking animation
+        for (0 => int i; i < bg_circle_meshes.size(); i++) {
+            if (is_shrinking[i] == 1 && bg_circle_meshes[i] != null) {
+                bg_circle_current_sizes[i] - (0.05 * bg_circle_target_sizes[i]) => float new_size;
+                if (new_size <= 0.0) {
+                    // Remove circle from scene
+                    bg_circle_meshes[i].detach();
+                    null @=> bg_circle_meshes[i];
+                    null @=> bg_circle_geometries[i];
+                    null @=> bg_circle_materials[i];
+                    0 => is_shrinking[i]; // Reset shrinking flag
+                } else {
+                    new_size => bg_circle_current_sizes[i];
+                    bg_circle_geometries[i].build(new_size, 64, 0.0, 2.0 * Math.PI);
+                }
             }
         }
     }
@@ -317,16 +338,16 @@ class GPad extends GGen {
             // Set target size for animation
             circle_size => bg_circle_target_sizes[i];
             initial_size => bg_circle_current_sizes[i];
+            0 => is_shrinking[i]; // Set shrinking flag to false
         }
     }
 
-    // Clear background circles
-    fun void clearCircles() {
+    // Shrink background circles
+    fun void shrinkCircles() {
         for (0 => int i; i < bg_circle_meshes.size(); i++) {
-            bg_circle_meshes[i].detach(); // Remove from scene
-            null @=> bg_circle_meshes[i];
-            null @=> bg_circle_geometries[i];
-            null @=> bg_circle_materials[i];
+            if (bg_circle_meshes[i] != null && is_shrinking[i] == 0) {
+                1 => is_shrinking[i];
+            }
         }
     }
 }
