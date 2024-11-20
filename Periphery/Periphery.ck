@@ -24,15 +24,6 @@ output_pass.input(bloom_pass.colorOutput());
 // Number of background circles
 0 => int num_bg_circles; // Start with no background circles
 
-// Arrays to store background circles
-new GMesh[0] @=> GMesh bg_circle_meshes[];
-new CircleGeometry[0] @=> CircleGeometry bg_circle_geometries[];
-new FlatMaterial[0] @=> FlatMaterial bg_circle_materials[];
-
-// Additional arrays for colors and speeds
-new vec3[0] @=> vec3 bg_circle_colors[];
-new float[0] @=> float bg_circle_speeds[];
-
 // Z-position for background circles
 -0.5 => float bg_circle_z;
 
@@ -176,6 +167,16 @@ class GPad extends GGen {
         Color.GREEN    // ACTIVE
     ] @=> vec3 colorMap[];
 
+    // Array to store the background circles for each pad
+    new GMesh[5] @=> GMesh bg_circle_meshes[];
+    new CircleGeometry[5] @=> CircleGeometry bg_circle_geometries[];
+    new FlatMaterial[5] @=> FlatMaterial bg_circle_materials[];
+    new float[5] @=> float bg_circle_target_sizes[]; // Target sizes for ease-in animation
+    new float[5] @=> float bg_circle_current_sizes[]; // Current sizes for ease-in animation
+    new float[5] @=> float bg_circle_growth_speeds[]; // Growth speeds for ease-in animation
+    new vec3[5] @=> vec3 bg_circle_colors[];
+    new float[5] @=> float bg_circle_speeds[];
+
     // Constructor
     fun void init(Mouse @ m) {
         if (mouse != null) return;
@@ -263,47 +264,59 @@ class GPad extends GGen {
 
         // Smooth scaling animation
         pad.scaX() + 0.05 * (1.0 - pad.scaX()) => pad.sca;
+
+        // Update the growth of circles if active
+        if (state == ACTIVE) {
+            for (0 => int i; i < bg_circle_meshes.size(); i++) {
+                bg_circle_current_sizes[i] + bg_circle_growth_speeds[i] * (bg_circle_target_sizes[i] - bg_circle_current_sizes[i]) => float new_size;
+                new_size => bg_circle_current_sizes[i];
+                bg_circle_geometries[i].build(new_size, 64, 0.0, 2.0 * Math.PI);
+            }
+        }
     }
 
     // Instantiate background circles
     fun void instantiateCircles() {
-        5 => num_bg_circles; // Set number of background circles to 5
-        for (0 => int i; i < num_bg_circles; i++) {
+        for (0 => int i; i < 5; i++) {
             // Random size between 0.5 and 1.5
             Std.rand2f(0.5, 1.5) => float circle_size;
 
-            // Random position within a range (-5.5 to 5.5)
-            Std.rand2f(-5.5, 5.5) => float x_pos;
-            Std.rand2f(-5.5, 5.5) => float y_pos;
+            // Set initial size to zero for ease-in effect
+            0.0 => float initial_size;
+
+            // Random position within a range (-5.0 to 5.0)
+            Std.rand2f(-5.0, 5.0) => float x_pos;
+            Std.rand2f(-5.0, 5.0) => float y_pos;
 
             // Random speed factor for size oscillation
             Std.rand2f(0.1, 0.5) => float speed_factor;
-            bg_circle_speeds << speed_factor;
+            speed_factor => bg_circle_speeds[i];
+
+            // Random growth speed for ease-in animation
+            Std.rand2f(0.02, 0.1) => float growth_speed;
+            growth_speed => bg_circle_growth_speeds[i];
 
             // Random color from the minimalist_colors array
             minimalist_colors.size() => int num_colors;
             Std.rand2(0, num_colors - 1) => int color_index;
             minimalist_colors[color_index] => vec3 circle_color;
-            bg_circle_colors << circle_color;
+            circle_color => bg_circle_colors[i];
 
             // Create geometry and material
-            CircleGeometry circle_geo;
-            circle_geo.build(circle_size, 64, 0.0, 2.0 * Math.PI);
+            new CircleGeometry @=> bg_circle_geometries[i];
+            bg_circle_geometries[i].build(initial_size, 64, 0.0, 2.0 * Math.PI);
 
-            FlatMaterial circle_material;
-            circle_color => circle_material.color; // Assign color
+            new FlatMaterial @=> bg_circle_materials[i];
+            circle_color => bg_circle_materials[i].color; // Assign color
 
             // Create mesh and add to scene
-            GMesh circle_mesh;
-            circle_mesh.geometry(circle_geo);
-            circle_mesh.material(circle_material);
-            circle_mesh --> GG.scene(); // Add to the scene
-            @(x_pos, y_pos, bg_circle_z) => circle_mesh.pos;
+            new GMesh(bg_circle_geometries[i], bg_circle_materials[i]) @=> bg_circle_meshes[i];
+            bg_circle_meshes[i] --> GG.scene(); // Add to the scene
+            @(x_pos, y_pos, bg_circle_z) => bg_circle_meshes[i].pos;
 
-            // Add to arrays
-            bg_circle_meshes << circle_mesh;
-            bg_circle_geometries << circle_geo;
-            bg_circle_materials << circle_material;
+            // Set target size for animation
+            circle_size => bg_circle_target_sizes[i];
+            initial_size => bg_circle_current_sizes[i];
         }
     }
 
@@ -311,13 +324,10 @@ class GPad extends GGen {
     fun void clearCircles() {
         for (0 => int i; i < bg_circle_meshes.size(); i++) {
             bg_circle_meshes[i].detach(); // Remove from scene
+            null @=> bg_circle_meshes[i];
+            null @=> bg_circle_geometries[i];
+            null @=> bg_circle_materials[i];
         }
-        bg_circle_meshes.clear();
-        bg_circle_geometries.clear();
-        bg_circle_materials.clear();
-        bg_circle_colors.clear();
-        bg_circle_speeds.clear();
-        0 => num_bg_circles; // Reset number of background circles
     }
 }
 
@@ -351,13 +361,6 @@ while (true) {
 
     // Set the background color using the calculated brightness
     @(brightness, brightness, brightness) => GG.scene().backgroundColor;
-
-    // Update background circles
-    for (0 => int i; i < num_bg_circles; i++) {
-        // Calculate new size based on time and individual speed
-        0.8 + 0.2 * Math.sin(now / second * bg_circle_speeds[i] + i) => float new_size;
-        bg_circle_geometries[i].build(new_size, 64, 0.0, 2.0 * Math.PI);
-    }
 
     // Update center circle size
     updateCircleSize();
