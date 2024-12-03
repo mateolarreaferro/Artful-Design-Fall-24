@@ -27,17 +27,12 @@ output_pass.input(bloom_pass.colorOutput());
 // Z-position for background circles
 -0.5 => float bg_circle_z;
 
-
 // Define a more interesting and vibrant color palette
 new vec3[0] @=> vec3 vibrant_colors[];
 
 vibrant_colors << @(0.976, 0.643, 0.376);   // Soft Tangerine
 vibrant_colors << @(0.992, 0.807, 0.388);   // Sunflower Yellow
 vibrant_colors << @(0.357, 0.525, 0.761);   // Cerulean Blue
-
-// Replace vibrant_colors with vibrant_colors in relevant code sections
-vibrant_colors.size() => int num_colors;  // Update array size reference
-
 
 // Variables for central circle size modulation
 3 * 0.8 => float base_circle_size; // Adjusted size
@@ -50,8 +45,6 @@ vec3 circle_center;
 circle_center.set(0.0, 0.0, 0.0);
 
 0.0 => float env_circle_z;
-
-
 
 // Center circle
 CircleGeometry center_circle_geo;
@@ -88,6 +81,11 @@ GGen padGroup --> GG.scene();
 // Array of pads
 GPad pads[NUM_PADS];
 
+// Instantiate each pad in the array
+for (0 => int i; i < NUM_PADS; i++) {
+    new GPad @=> pads[i];
+}
+
 // Update pad positions on window resize
 fun void resizeListener() {
     WindowResizeEvent e;  // listens to the window resize event
@@ -111,7 +109,7 @@ fun void placePads() {
         pads[i] @=> GPad pad;
 
         // Initialize pad
-        pad.init(mouse);
+        pad.init(mouse, i);
 
         // Connect to scene
         pad --> padGroup;
@@ -135,6 +133,9 @@ class GPad extends GGen {
 
     // Reference to a mouse
     Mouse @ mouse;
+
+    // Pad index
+    int index;
 
     // States
     0 => static int NONE;     // Not hovered or active
@@ -165,11 +166,28 @@ class GPad extends GGen {
     new float[5] @=> float bg_circle_speeds[];
     new int[5] @=> int is_shrinking[]; // Track if a circle is shrinking
 
+    // Sound variables
+    SndBuf @ sampleBuf;
+    float volume;
+    float targetVolume;
+    float volumeStep;
+    1.0 => float fadeTime;
+
     // Constructor
-    fun void init(Mouse @ m) {
+    fun void init(Mouse @ m, int idx) {
         if (mouse != null) return;
         m @=> this.mouse;
+        idx => this.index;
         spork ~ this.clickListener();
+
+        // Initialize sound variables
+        null @=> sampleBuf;
+        0.0 => volume;
+        0.0 => targetVolume;
+        0.0 => volumeStep;
+
+        // Spork the update loop
+        spork ~ this.selfUpdate();
     }
 
     // Set color
@@ -210,6 +228,14 @@ class GPad extends GGen {
         }
     }
 
+    // Update loop
+    fun void selfUpdate() {
+        while (true) {
+            this.update(GG.dt());
+            GG.nextFrame() => now;
+        }
+    }
+
     // Handle input and state transitions
     fun void handleInput(int input) {
         if (state == NONE) {
@@ -217,6 +243,7 @@ class GPad extends GGen {
             else if (input == MOUSE_CLICK) {
                 enter(ACTIVE);
                 instantiateCircles(); // Instantiate circles on pad select
+                startSample();        // Start sample on pad select
             }
         } else if (state == HOVERED) {
             if (input == MOUSE_EXIT)       enter(NONE);
@@ -224,15 +251,18 @@ class GPad extends GGen {
                 if (state == ACTIVE) {
                     enter(NONE);
                     shrinkCircles(); // Shrink circles on pad deselect
+                    stopSample();    // Stop sample on pad deselect
                 } else {
                     enter(ACTIVE);
                     instantiateCircles(); // Instantiate circles on pad select
+                    startSample();        // Start sample on pad select
                 }
             }
         } else if (state == ACTIVE) {
             if (input == MOUSE_CLICK) {
                 enter(NONE);
                 shrinkCircles(); // Shrink circles on pad deselect
+                stopSample();    // Stop sample on pad deselect
             }
         }
     }
@@ -279,6 +309,28 @@ class GPad extends GGen {
                     new_size => bg_circle_current_sizes[i];
                     bg_circle_geometries[i].build(new_size, 72, 0.0, 2.0 * Math.PI);
                 }
+            }
+        }
+
+        // Update volume towards targetVolume
+        if (sampleBuf != null) {
+            if (volume != targetVolume) {
+                volume + (volumeStep * dt) => volume;
+                // Ensure volume stays within [0.0, 1.0]
+                if (volume > 1.0) { 1.0 => volume; }
+                if (volume < 0.0) { 0.0 => volume; }
+                if ((volumeStep > 0 && volume >= targetVolume) || (volumeStep < 0 && volume <= targetVolume)) {
+                    targetVolume => volume;
+                    if (volume == 0.0) {
+                        // Stop the sample
+                        sampleBuf =< dac;
+                        null @=> sampleBuf;
+                    }
+                }
+            }
+            // Ensure sampleBuf is not null before setting gain
+            if (sampleBuf != null) {
+                volume => sampleBuf.gain;
             }
         }
     }
@@ -337,6 +389,50 @@ class GPad extends GGen {
             }
         }
     }
+
+    // Start playing the sample with fade in
+    fun void startSample() {
+        if (sampleBuf == null) {
+            new SndBuf @=> sampleBuf;
+            sampleBuf => dac;
+            // Assign sample file based on index
+            string filename;
+            if (index == 0) {
+                "samples/Drone.wav" => filename;
+            } else if (index == 1) {
+                "samples/Beat.wav" => filename;
+            } else if (index == 2) {
+                "samples/Rain.wav" => filename;
+            } else if (index == 3) {
+                "samples/Nature.wav" => filename;
+            } else {
+                // No sample for this pad
+                return;
+            }
+            sampleBuf.read(filename);
+            sampleBuf.loop(1);
+            0.0 => sampleBuf.gain;
+            sampleBuf.play();
+            0.0 => volume;
+            1.0 => targetVolume;
+            (targetVolume - volume) / fadeTime => volumeStep;
+        } else {
+            // Sample is already loaded, restart from beginning
+            0 => sampleBuf.pos;
+            0.0 => volume;
+            1.0 => targetVolume;
+            (targetVolume - volume) / fadeTime => volumeStep;
+        }
+    }
+
+    // Stop playing the sample with fade out
+    fun void stopSample() {
+        if (sampleBuf != null) {
+            sampleBuf.gain() => volume;
+            0.0 => targetVolume;
+            (targetVolume - volume) / fadeTime => volumeStep;
+        }
+    }
 }
 
 // Simplified Mouse class
@@ -366,7 +462,6 @@ while (true) {
 
     // Map sine value from [-1,1] to [0,1] for brightness
     (sin_value + 1.0) / 2.0 => float brightness;
-
 
     // Update center circle size
     updateCircleSize();
