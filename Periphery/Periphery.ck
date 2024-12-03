@@ -281,13 +281,13 @@ class GPad extends GGen {
         this.color(colorMap[state]);
 
         // Smooth scaling animation
-        pad.scaX() + 0.05 * (1.0 - pad.scaX()) => pad.sca;
+        pad.scaX() + (0.05 * (1.0 - pad.scaX())) => pad.sca;
 
         // Update the growth of circles if active
         if (state == ACTIVE) {
             for (0 => int i; i < bg_circle_meshes.size(); i++) {
                 if (is_shrinking[i] == 0 && bg_circle_meshes[i] != null) {
-                    bg_circle_current_sizes[i] + bg_circle_growth_speeds[i] * (bg_circle_target_sizes[i] - bg_circle_current_sizes[i]) => float new_size;
+                    bg_circle_current_sizes[i] + (bg_circle_growth_speeds[i] * (bg_circle_target_sizes[i] - bg_circle_current_sizes[i])) => float new_size;
                     new_size => bg_circle_current_sizes[i];
                     bg_circle_geometries[i].build(new_size, 64, 0.0, 2.0 * Math.PI);
                 }
@@ -475,6 +475,16 @@ while (true) {
 
     // Map sine value from [-1,1] to [0,1] for brightness
     (sin_value + 1.0) / 2.0 => float brightness;
+
+    // Read scroll delta
+    GWindow.scrollY() => float scroll_delta;
+
+    // Adjust sin_speed based on scroll delta
+    sin_speed + (scroll_delta * 0.05) => sin_speed;
+
+    // Clamp sin_speed between 0.2 and 2.0
+    if (sin_speed < 0.2) { 0.2 => sin_speed; }
+    if (sin_speed > 2.0) { 2.0 => sin_speed; }
 
     // Update center circle size
     updateCircleSize();
