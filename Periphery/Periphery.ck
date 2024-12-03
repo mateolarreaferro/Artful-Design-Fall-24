@@ -24,7 +24,7 @@ output_pass.input(bloom_pass.colorOutput());
 // Z-position for background circles
 -0.5 => float bg_circle_z;
 
-// Define a vibrant color palette
+// Define a vibrant color palette (particles will be black)
 new vec3[0] @=> vec3 vibrant_colors[];
 vibrant_colors << @(0.976, 0.643, 0.376);   // Soft Tangerine
 vibrant_colors << @(0.992, 0.807, 0.388);   // Sunflower Yellow
@@ -148,8 +148,8 @@ class GPad extends GGen {
     // Color map
     [
         Color.BLACK,    // NONE
-        Color.ORANGE,  // HOVERED
-        Color.WHITE    // ACTIVE
+        Color.ORANGE,   // HOVERED
+        Color.WHITE     // ACTIVE
     ] @=> vec3 colorMap[];
 
     // Arrays to store background circles for each pad
@@ -455,6 +455,13 @@ class Mouse {
     }
 }
 
+// Function to calculate distance between two vec3 points
+fun float vec3Distance(vec3 a, vec3 b) {
+    return Math.sqrt( (a.x - b.x)*(a.x - b.x) +
+                      (a.y - b.y)*(a.y - b.y) +
+                      (a.z - b.z)*(a.z - b.z) );
+}
+
 // Particle class
 class Particle {
     GMesh @ mesh;
@@ -499,6 +506,21 @@ class Particle {
             position + velocity * dt => position;
             position => mesh.pos;
 
+            // Calculate distance from center
+            vec3Distance(position, circle_center) => float distance_from_center;
+
+            // Remove particle if it exceeds a certain distance
+            20.0 => float max_distance; // Adjust as needed
+            if (distance_from_center > max_distance) {
+                // Remove particle
+                mesh.detach();
+                null @=> mesh;
+                null @=> geometry;
+                null @=> material;
+                0 => active;
+                return;
+            }
+
             // Fade out over time
             1.0 - (age / lifespan) => float alpha;
             material.color( @(color.x * alpha, color.y * alpha, color.z * alpha) );
@@ -518,7 +540,7 @@ class Particle {
 }
 
 // Particle pool
-32 => int MAX_PARTICLES;
+64 => int MAX_PARTICLES; // Increased to handle more particles
 Particle particles[MAX_PARTICLES];
 
 // Initialize particles
@@ -528,9 +550,8 @@ for (0 => int i; i < MAX_PARTICLES; i++) {
 }
 
 // Function to instantiate particles when sin_speed changes
-// Function to instantiate particles when sin_speed changes
 fun void instantiateParticles() {
-    for (0 => int i; i < 5; i++) {
+    for (0 => int i; i < 10; i++) { // Increased number of particles
         // Find an inactive particle
         -1 => int idx;
         for (0 => int j; j < MAX_PARTICLES; j++) {
@@ -574,7 +595,7 @@ fun void instantiateParticles() {
         dy / length => float ny;
 
         // Increase the speed
-        1.5 => float speed; // Increased speed (was previously 0.5)
+        2.0 => float speed; // Increased speed
 
         // Velocity components
         nx * speed => float vx;
@@ -582,22 +603,16 @@ fun void instantiateParticles() {
         0.0 => float vz;
         @(vx, vy, vz) => vec3 velocity;
 
-        // Random color from the vibrant_colors array
-        vibrant_colors.size() => int num_colors;
-        Std.rand2(0, num_colors - 1) => int color_index;
-        vibrant_colors[color_index] => vec3 color;
+        // Set particle color to black
+        @(0.0, 0.0, 0.0) => vec3 color;
 
-        // Random lifespan between 2 and 3 seconds
-        Std.rand2f(2.0, 3.0) => float lifespan;
+        // Random lifespan between 1 and 2 seconds
+        Std.rand2f(1.0, 2.0) => float lifespan;
 
         // Initialize the particle
         particles[idx].init(position, velocity, color, lifespan, size);
     }
 }
-
-
-
-
 
 // Main loop
 while (true) {
@@ -623,8 +638,8 @@ while (true) {
     if (sin_speed < 0.2) { 0.2 => sin_speed; }
     if (sin_speed > 2.0) { 2.0 => sin_speed; }
 
-    // Check if sin_speed has changed
-    if (sin_speed != previous_sin_speed) {
+    // Check if sin_speed has changed significantly
+    if (Math.fabs(sin_speed - previous_sin_speed) > 0.001) { // Threshold to detect small changes
         // sin_speed has changed, so instantiate particles
         instantiateParticles();
     }
