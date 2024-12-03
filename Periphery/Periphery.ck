@@ -15,7 +15,7 @@ output_pass.input(bloom_pass.colorOutput());
 
 1 => bloom_pass.intensity;
 0.1 => bloom_pass.radius;
-0.4 => bloom_pass.threshold;
+0.5 => bloom_pass.threshold;
 
 // Variables for background color modulation
 0 => float bg_time; // Initialize background time
@@ -171,7 +171,7 @@ class GPad extends GGen {
     float volume;
     float targetVolume;
     float volumeStep;
-    2.0 => float fadeTime;
+    1.5 => float fadeTime;
 
     // Constructor
     fun void init(Mouse @ m, int idx) {
@@ -402,7 +402,7 @@ class GPad extends GGen {
                 0.6 => targetVolume;
             } else if (index == 1) {
                 "samples/Rain.wav" => filename;
-                0.45 => targetVolume;
+                0.2 => targetVolume;
             } else if (index == 2) {
                 "samples/Beat.wav" => filename;
                 0.5 => targetVolume;
