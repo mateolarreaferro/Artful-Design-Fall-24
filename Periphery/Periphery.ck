@@ -83,7 +83,7 @@ spork ~ mouse.selfUpdate(); // start updating mouse position
 GGen padGroup --> GG.scene();
 
 // Number of pads
-5 => int NUM_PADS;
+4 => int NUM_PADS;
 
 // Array of pads
 GPad pads[NUM_PADS];
