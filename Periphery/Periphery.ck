@@ -21,15 +21,11 @@ output_pass.input(bloom_pass.colorOutput());
 0 => float bg_time; // Initialize background time
 (2.0 * Math.PI) / 60.0 => float bg_omega; // Angular frequency for a 60-second cycle
 
-// Number of background circles
-0 => int num_bg_circles; // Start with no background circles
-
 // Z-position for background circles
 -0.5 => float bg_circle_z;
 
-// Define a more interesting and vibrant color palette
+// Define a vibrant color palette
 new vec3[0] @=> vec3 vibrant_colors[];
-
 vibrant_colors << @(0.976, 0.643, 0.376);   // Soft Tangerine
 vibrant_colors << @(0.992, 0.807, 0.388);   // Sunflower Yellow
 vibrant_colors << @(0.357, 0.525, 0.761);   // Cerulean Blue
@@ -40,6 +36,7 @@ base_circle_size => float current_circle_size;
 0.3 * base_circle_size => float min_circle_size;
 0.0 => float sin_time;
 0.5 => float sin_speed;
+0.5 => float previous_sin_speed; // Added to track previous sin_speed
 
 vec3 circle_center;
 circle_center.set(0.0, 0.0, 0.0);
@@ -155,7 +152,7 @@ class GPad extends GGen {
         Color.WHITE    // ACTIVE
     ] @=> vec3 colorMap[];
 
-    // Array to store the background circles for each pad
+    // Arrays to store background circles for each pad
     new GMesh[5] @=> GMesh bg_circle_meshes[];
     new CircleGeometry[5] @=> CircleGeometry bg_circle_geometries[];
     new FlatMaterial[5] @=> FlatMaterial bg_circle_materials[];
@@ -423,7 +420,7 @@ class GPad extends GGen {
             // Sample is already loaded, restart from beginning
             0 => sampleBuf.pos;
             0.0 => volume;
-             if (index == 0) {
+            if (index == 0) {
                 0.6 => targetVolume;
             } else if (index == 1) {
                 0.2 => targetVolume;
@@ -462,6 +459,79 @@ class Mouse {
     }
 }
 
+// Global variables for particles instantiated when sin_speed changes
+50 => int max_particles; // Set a maximum number of particles
+new GMesh[max_particles] @=> GMesh bg_particles_meshes[];
+new CircleGeometry[max_particles] @=> CircleGeometry bg_particles_geometries[];
+new FlatMaterial[max_particles] @=> FlatMaterial bg_particles_materials[];
+new float[max_particles] @=> float bg_particles_target_sizes[];
+new float[max_particles] @=> float bg_particles_current_sizes[];
+new float[max_particles] @=> float bg_particles_growth_speeds[];
+new vec3[max_particles] @=> vec3 bg_particles_colors[];
+new int[max_particles] @=> int particles_is_shrinking[];
+new float[max_particles] @=> float bg_particles_timers[];
+0 => int bg_particles_count; // Keep track of the number of particles
+5.0 => float particle_lifespan; // Lifespan of particles
+
+// Function to instantiate particles when sin_speed changes
+fun void instantiateParticles() {
+    for (0 => int i; i < 5; i++) {
+        if (bg_particles_count >= max_particles) {
+            // If we've reached the maximum number of particles, overwrite from the beginning
+            0 => bg_particles_count;
+        }
+
+        // Random size between 0.5 and 1.5
+        Std.rand2f(0.5, 1.5) => float circle_size;
+
+        // Set initial size to zero for ease-in effect
+        0.0 => float initial_size;
+
+        // Random position within a range (-5.0 to 5.0)
+        Std.rand2f(-5.0, 5.0) => float x_pos;
+        Std.rand2f(-5.0, 5.0) => float y_pos;
+
+        // Random growth speed for ease-in animation
+        Std.rand2f(0.02, 0.1) => float growth_speed;
+
+        // Random color from the vibrant_colors array
+        vibrant_colors.size() => int num_colors;
+        Std.rand2(0, num_colors - 1) => int color_index;
+        vibrant_colors[color_index] => vec3 circle_color;
+
+        // If there's an existing particle at this index, remove it
+        if (bg_particles_meshes[bg_particles_count] != null) {
+            bg_particles_meshes[bg_particles_count].detach();
+        }
+
+        // Create geometry and material
+        new CircleGeometry @=> CircleGeometry circle_geometry;
+        circle_geometry.build(initial_size, 72, 0.0, 2.0 * Math.PI);
+
+        new FlatMaterial @=> FlatMaterial circle_material;
+        circle_color => circle_material.color; // Assign color
+
+        // Create mesh and add to scene
+        new GMesh(circle_geometry, circle_material) @=> GMesh circle_mesh;
+        circle_mesh --> GG.scene(); // Add to the scene
+        @(x_pos, y_pos, bg_circle_z) => circle_mesh.pos;
+
+        // Store in arrays
+        circle_mesh @=> bg_particles_meshes[bg_particles_count];
+        circle_geometry @=> bg_particles_geometries[bg_particles_count];
+        circle_material @=> bg_particles_materials[bg_particles_count];
+        circle_size => bg_particles_target_sizes[bg_particles_count];
+        initial_size => bg_particles_current_sizes[bg_particles_count];
+        growth_speed => bg_particles_growth_speeds[bg_particles_count];
+        circle_color => bg_particles_colors[bg_particles_count];
+        0 => particles_is_shrinking[bg_particles_count]; // Set shrinking flag to false
+        0.0 => bg_particles_timers[bg_particles_count];   // Initialize timer
+
+        // Increment particle count
+        bg_particles_count++;
+    }
+}
+
 // Main loop
 while (true) {
     GG.nextFrame() => now;
@@ -486,9 +556,54 @@ while (true) {
     if (sin_speed < 0.2) { 0.2 => sin_speed; }
     if (sin_speed > 2.0) { 2.0 => sin_speed; }
 
+    // Check if sin_speed has changed
+    if (sin_speed != previous_sin_speed) {
+        // sin_speed has changed, so instantiate particles
+        instantiateParticles();
+    }
+
+    // Update previous sin_speed
+    sin_speed => previous_sin_speed;
+
     // Update center circle size
     updateCircleSize();
 
     // Place pads after the window is created
     placePads();
+
+    // Update the growth of particles
+    for (0 => int i; i < max_particles; i++) {
+        if (bg_particles_meshes[i] != null && particles_is_shrinking[i] == 0) {
+            bg_particles_current_sizes[i] + (bg_particles_growth_speeds[i] * (bg_particles_target_sizes[i] - bg_particles_current_sizes[i])) => float new_size;
+            new_size => bg_particles_current_sizes[i];
+            bg_particles_geometries[i].build(new_size, 72, 0.0, 2.0 * Math.PI);
+        }
+    }
+
+    // Update particle timers and handle shrinking
+    for (0 => int i; i < max_particles; i++) {
+        if (bg_particles_meshes[i] != null) {
+            bg_particles_timers[i] + GG.dt() => bg_particles_timers[i];
+            if (bg_particles_timers[i] >= particle_lifespan && particles_is_shrinking[i] == 0) {
+                1 => particles_is_shrinking[i]; // Start shrinking
+            }
+        }
+    }
+
+    // Handle shrinking animation
+    for (0 => int i; i < max_particles; i++) {
+        if (particles_is_shrinking[i] == 1 && bg_particles_meshes[i] != null) {
+            bg_particles_current_sizes[i] - (0.05 * bg_particles_target_sizes[i]) => float new_size;
+            if (new_size <= 0.0) {
+                // Remove circle from scene
+                bg_particles_meshes[i].detach();
+                null @=> bg_particles_meshes[i];
+                null @=> bg_particles_geometries[i];
+                null @=> bg_particles_materials[i];
+            } else {
+                new_size => bg_particles_current_sizes[i];
+                bg_particles_geometries[i].build(new_size, 72, 0.0, 2.0 * Math.PI);
+            }
+        }
+    }
 }
