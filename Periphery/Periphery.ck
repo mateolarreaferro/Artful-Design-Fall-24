@@ -528,6 +528,7 @@ for (0 => int i; i < MAX_PARTICLES; i++) {
 }
 
 // Function to instantiate particles when sin_speed changes
+// Function to instantiate particles when sin_speed changes
 fun void instantiateParticles() {
     for (0 => int i; i < 5; i++) {
         // Find an inactive particle
@@ -546,15 +547,38 @@ fun void instantiateParticles() {
         // Random size between 0.05 and 0.15
         Std.rand2f(0.05, 0.15) => float size;
 
-        // Random position near center
-        circle_center.x + Std.rand2f(-current_circle_size / 2.0, current_circle_size / 2.0) => float x_pos;
-        circle_center.y + Std.rand2f(-current_circle_size / 2.0, current_circle_size / 2.0) => float y_pos;
+        // Random angle between 0 and 2π
+        Std.rand2f(0.0, 2.0 * Math.PI) => float angle;
+
+        // Adjusted radii to be outside the circle
+        current_circle_size / 2.0 * 1.5 => float R1; // Inner radius (50% larger than the circle)
+        current_circle_size / 2.0 * 2.0 => float R2; // Outer radius (100% larger than the circle)
+
+        // Random radius between R1 and R2
+        Std.rand2f(R1, R2) => float radius;
+
+        // Calculate position on the ring outside the circle
+        circle_center.x + radius * Math.cos(angle) => float x_pos;
+        circle_center.y + radius * Math.sin(angle) => float y_pos;
         circle_center.z => float z_pos;
         @(x_pos, y_pos, z_pos) => vec3 position;
 
-        // Random velocity
-        Std.rand2f(-1.0, 1.0) => float vx;
-        Std.rand2f(-1.0, 1.0) => float vy;
+        // Velocity directed away from the center
+        // Compute the direction vector from center to position
+        x_pos - circle_center.x => float dx;
+        y_pos - circle_center.y => float dy;
+
+        // Normalize the direction vector
+        Math.sqrt(dx*dx + dy*dy) => float length;
+        dx / length => float nx;
+        dy / length => float ny;
+
+        // Increase the speed
+        1.5 => float speed; // Increased speed (was previously 0.5)
+
+        // Velocity components
+        nx * speed => float vx;
+        ny * speed => float vy;
         0.0 => float vz;
         @(vx, vy, vz) => vec3 velocity;
 
@@ -563,13 +587,17 @@ fun void instantiateParticles() {
         Std.rand2(0, num_colors - 1) => int color_index;
         vibrant_colors[color_index] => vec3 color;
 
-        // Random lifespan between 1 and 2 seconds
-        Std.rand2f(1.0, 2.0) => float lifespan;
+        // Random lifespan between 2 and 3 seconds
+        Std.rand2f(2.0, 3.0) => float lifespan;
 
         // Initialize the particle
         particles[idx].init(position, velocity, color, lifespan, size);
     }
 }
+
+
+
+
 
 // Main loop
 while (true) {
