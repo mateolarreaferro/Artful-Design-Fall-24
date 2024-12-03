@@ -151,7 +151,7 @@ class GPad extends GGen {
     // Color map
     [
         Color.BLACK,    // NONE
-        Color.YELLOW,  // HOVERED
+        Color.ORANGE,  // HOVERED
         Color.WHITE    // ACTIVE
     ] @=> vec3 colorMap[];
 
@@ -405,7 +405,7 @@ class GPad extends GGen {
                 0.2 => targetVolume;
             } else if (index == 2) {
                 "samples/Beat.wav" => filename;
-                0.5 => targetVolume;
+                0.3 => targetVolume;
             } else if (index == 3) {
                 "samples/Drone.wav" => filename;
                 1.0 => targetVolume;
@@ -423,7 +423,17 @@ class GPad extends GGen {
             // Sample is already loaded, restart from beginning
             0 => sampleBuf.pos;
             0.0 => volume;
-            1.0 => targetVolume;
+             if (index == 0) {
+                0.6 => targetVolume;
+            } else if (index == 1) {
+                0.2 => targetVolume;
+            } else if (index == 2) {
+                0.3 => targetVolume;
+            } else if (index == 3) {
+                1.0 => targetVolume;
+            } else {
+                return;
+            }
             (targetVolume - volume) / fadeTime => volumeStep;
         }
     }
