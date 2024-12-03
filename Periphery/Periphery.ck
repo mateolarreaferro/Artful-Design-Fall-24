@@ -5,7 +5,7 @@
 
 // Set up the camera and background color
 GG.camera().orthographic();
-@(0, 0, 0) => GG.scene().backgroundColor; // Start with white background
+@(0.992, 0.807, 0.388) => GG.scene().backgroundColor; 
 
 // Set up render passes
 GG.outputPass() @=> OutputPass output_pass;
@@ -13,8 +13,8 @@ GG.renderPass() --> BloomPass bloom_pass --> output_pass;
 bloom_pass.input(GG.renderPass().colorOutput());
 output_pass.input(bloom_pass.colorOutput());
 
-1.5 => bloom_pass.intensity;
-0.3 => bloom_pass.radius;
+1 => bloom_pass.intensity;
+0.1 => bloom_pass.radius;
 0.4 => bloom_pass.threshold;
 
 // Variables for background color modulation
@@ -27,17 +27,19 @@ output_pass.input(bloom_pass.colorOutput());
 // Z-position for background circles
 -0.5 => float bg_circle_z;
 
-// Initialize the minimalist_colors array
-new vec3[0] @=> vec3 minimalist_colors[];
 
-// Define minimalist and modern colors
-minimalist_colors << @(0.8, 0.8, 0.8);   // Soft Gray
-minimalist_colors << @(0.9, 0.9, 0.9);   // Light Gray
-minimalist_colors << @(0.7, 0.8, 0.9);   // Pale Blue
-minimalist_colors << @(0.6, 0.7, 0.8);   // Muted Blue
-minimalist_colors << @(0.7, 0.85, 0.75); // Mint Green
-minimalist_colors << @(0.9, 0.8, 0.8);   // Blush Pink
-minimalist_colors << @(0.8, 0.75, 0.9);  // Lavender
+// Define a more interesting and vibrant color palette
+new vec3[0] @=> vec3 vibrant_colors[];
+
+vibrant_colors << @(0.976, 0.643, 0.376);   // Soft Tangerine
+vibrant_colors << @(0.992, 0.807, 0.388);   // Sunflower Yellow
+vibrant_colors << @(0.486, 0.729, 0.894);   // Sky Blue
+vibrant_colors << @(0.357, 0.525, 0.761);   // Cerulean Blue
+vibrant_colors << @(0.643, 0.898, 0.592);   // Mint Green
+
+// Replace vibrant_colors with vibrant_colors in relevant code sections
+vibrant_colors.size() => int num_colors;  // Update array size reference
+
 
 // Variables for central circle size modulation
 3 * 0.8 => float base_circle_size; // Adjusted size
@@ -49,21 +51,9 @@ base_circle_size => float current_circle_size;
 vec3 circle_center;
 circle_center.set(0.0, 0.0, 0.0);
 
-// Adjusted positions for rendering order
--0.01 => float frame_circle_z;
 0.0 => float env_circle_z;
 
-// Frame circle
-2 * base_circle_size => float frame_circle_size;
-CircleGeometry frame_circle_geo;
-FlatMaterial frame_circle_material;
-GMesh frame_circle_mesh(frame_circle_geo, frame_circle_material) --> GG.scene();
 
-// Set frame circle position with adjusted z
-@(circle_center.x, circle_center.y, frame_circle_z) => frame_circle_mesh.pos;
-
-frame_circle_geo.build(frame_circle_size, 64, 0.0, 2.0 * Math.PI);
-@(0.0, 0.0, 0.0) => frame_circle_material.color;
 
 // Center circle
 CircleGeometry center_circle_geo;
@@ -74,14 +64,13 @@ GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene
 @(circle_center.x, circle_center.y, env_circle_z) => center_circle_mesh.pos;
 
 center_circle_geo.build(current_circle_size, 64, 0.0, 2.0 * Math.PI);
-@(0.8, 0.8, 0.8) => center_circle_material.color;
+@(0, 0, 0) => center_circle_material.color; // Cerulean Blue
 
 // Function to smoothly adjust the circle size using a cosine function
 fun void updateCircleSize() {
     sin_time + (sin_speed * GG.dt()) => sin_time;
     base_circle_size - ((base_circle_size - min_circle_size) / 2.0) * (1.0 + Math.cos(sin_time)) => current_circle_size;
     center_circle_geo.build(current_circle_size, 64, 0.0, 2.0 * Math.PI);
-    frame_circle_geo.build(current_circle_size * 1.02, 64, 0.0, 2.0 * Math.PI);
 }
 
 // =======================================================
@@ -162,9 +151,9 @@ class GPad extends GGen {
 
     // Color map
     [
-        Color.GRAY,    // NONE
+        Color.BLACK,    // NONE
         Color.YELLOW,  // HOVERED
-        Color.GREEN    // ACTIVE
+        Color.WHITE    // ACTIVE
     ] @=> vec3 colorMap[];
 
     // Array to store the background circles for each pad
@@ -317,10 +306,10 @@ class GPad extends GGen {
             Std.rand2f(0.02, 0.1) => float growth_speed;
             growth_speed => bg_circle_growth_speeds[i];
 
-            // Random color from the minimalist_colors array
-            minimalist_colors.size() => int num_colors;
+            // Random color from the vibrant_colors array
+            vibrant_colors.size() => int num_colors;
             Std.rand2(0, num_colors - 1) => int color_index;
-            minimalist_colors[color_index] => vec3 circle_color;
+            vibrant_colors[color_index] => vec3 circle_color;
             circle_color => bg_circle_colors[i];
 
             // Create geometry and material
@@ -380,8 +369,6 @@ while (true) {
     // Map sine value from [-1,1] to [0,1] for brightness
     (sin_value + 1.0) / 2.0 => float brightness;
 
-    // Set the background color using the calculated brightness
-    @(brightness, brightness, brightness) => GG.scene().backgroundColor;
 
     // Update center circle size
     updateCircleSize();
