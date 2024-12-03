@@ -171,7 +171,7 @@ class GPad extends GGen {
     float volume;
     float targetVolume;
     float volumeStep;
-    1.0 => float fadeTime;
+    2.0 => float fadeTime;
 
     // Constructor
     fun void init(Mouse @ m, int idx) {
@@ -398,13 +398,17 @@ class GPad extends GGen {
             // Assign sample file based on index
             string filename;
             if (index == 0) {
-                "samples/Drone.wav" => filename;
-            } else if (index == 1) {
-                "samples/Beat.wav" => filename;
-            } else if (index == 2) {
-                "samples/Rain.wav" => filename;
-            } else if (index == 3) {
                 "samples/Nature.wav" => filename;
+                0.6 => targetVolume;
+            } else if (index == 1) {
+                "samples/Rain.wav" => filename;
+                0.45 => targetVolume;
+            } else if (index == 2) {
+                "samples/Beat.wav" => filename;
+                0.5 => targetVolume;
+            } else if (index == 3) {
+                "samples/Drone.wav" => filename;
+                1.0 => targetVolume;
             } else {
                 // No sample for this pad
                 return;
@@ -414,7 +418,6 @@ class GPad extends GGen {
             0.0 => sampleBuf.gain;
             sampleBuf.play();
             0.0 => volume;
-            1.0 => targetVolume;
             (targetVolume - volume) / fadeTime => volumeStep;
         } else {
             // Sample is already loaded, restart from beginning
