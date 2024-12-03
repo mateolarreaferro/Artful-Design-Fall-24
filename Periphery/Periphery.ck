@@ -36,7 +36,7 @@ base_circle_size => float current_circle_size;
 0.3 * base_circle_size => float min_circle_size;
 0.0 => float sin_time;
 0.5 => float sin_speed;
-0.5 => float previous_sin_speed; // Added to track previous sin_speed
+0.5 => float previous_sin_speed;
 
 vec3 circle_center;
 circle_center.set(0.0, 0.0, 0.0);
@@ -460,7 +460,7 @@ class Mouse {
 }
 
 // Global variables for particles instantiated when sin_speed changes
-50 => int max_particles; // Set a maximum number of particles
+20 => int max_particles; // Set a maximum number of particles
 new GMesh[max_particles] @=> GMesh bg_particles_meshes[];
 new CircleGeometry[max_particles] @=> CircleGeometry bg_particles_geometries[];
 new FlatMaterial[max_particles] @=> FlatMaterial bg_particles_materials[];
@@ -471,7 +471,7 @@ new vec3[max_particles] @=> vec3 bg_particles_colors[];
 new int[max_particles] @=> int particles_is_shrinking[];
 new float[max_particles] @=> float bg_particles_timers[];
 0 => int bg_particles_count; // Keep track of the number of particles
-5.0 => float particle_lifespan; // Lifespan of particles
+0.5 => float particle_lifespan; // Lifespan of particles
 
 // Function to instantiate particles when sin_speed changes
 fun void instantiateParticles() {
@@ -492,12 +492,9 @@ fun void instantiateParticles() {
         Std.rand2f(-5.0, 5.0) => float y_pos;
 
         // Random growth speed for ease-in animation
-        Std.rand2f(0.02, 0.1) => float growth_speed;
+        Std.rand2f(0.02, 0.03) => float growth_speed;
 
-        // Random color from the vibrant_colors array
-        vibrant_colors.size() => int num_colors;
-        Std.rand2(0, num_colors - 1) => int color_index;
-        vibrant_colors[color_index] => vec3 circle_color;
+        vibrant_colors[2] => vec3 circle_color;
 
         // If there's an existing particle at this index, remove it
         if (bg_particles_meshes[bg_particles_count] != null) {
