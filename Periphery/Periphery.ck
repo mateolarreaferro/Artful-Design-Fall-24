@@ -33,9 +33,7 @@ new vec3[0] @=> vec3 vibrant_colors[];
 
 vibrant_colors << @(0.976, 0.643, 0.376);   // Soft Tangerine
 vibrant_colors << @(0.992, 0.807, 0.388);   // Sunflower Yellow
-vibrant_colors << @(0.486, 0.729, 0.894);   // Sky Blue
 vibrant_colors << @(0.357, 0.525, 0.761);   // Cerulean Blue
-vibrant_colors << @(0.643, 0.898, 0.592);   // Mint Green
 
 // Replace vibrant_colors with vibrant_colors in relevant code sections
 vibrant_colors.size() => int num_colors;  // Update array size reference
