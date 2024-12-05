@@ -38,10 +38,18 @@ base_circle_size => float current_circle_size;
 0.5 => float sin_speed;
 0.5 => float previous_sin_speed;
 
+current_circle_size => float previous_circle_size; // Added variable
+1 => int was_increasing; // 1 if increasing, 0 if decreasing
+
 vec3 circle_center;
 circle_center.set(0.0, 0.0, 0.0);
 
 0.0 => float env_circle_z;
+
+// Text
+GText text --> GG.scene();
+text.sca(.2);
+text.text("breathe in"); // Initial text
 
 // Center circle
 CircleGeometry center_circle_geo;
@@ -59,6 +67,30 @@ fun void updateCircleSize() {
     sin_time + (sin_speed * GG.dt()) => sin_time;
     base_circle_size - ((base_circle_size - min_circle_size) / 2.0) * (1.0 + Math.cos(sin_time)) => current_circle_size;
     center_circle_geo.build(current_circle_size, 64, 0.0, 2.0 * Math.PI);
+
+    // Determine if the circle is increasing or decreasing
+    int is_increasing;
+    if (current_circle_size > previous_circle_size) {
+        1 => is_increasing;
+    } else if (current_circle_size < previous_circle_size) {
+        0 => is_increasing;
+    } else {
+        // No change in size
+        is_increasing => is_increasing;
+    }
+
+    // Update the text only if there's a significant change in direction
+    if (is_increasing != was_increasing) {
+        if (is_increasing == 1) {
+            text.text("breathe in");
+        } else {
+            text.text("breathe out");
+        }
+        is_increasing => was_increasing;
+    }
+
+    // Update previous_circle_size for the next comparison
+    current_circle_size => previous_circle_size;
 }
 
 // =======================================================
