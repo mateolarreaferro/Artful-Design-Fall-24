@@ -1,16 +1,5 @@
 //-----------------------------------------------------------------------------
-// name: Periphery.ck (Final Corrected Version)
-//-----------------------------------------------------------------------------
-//
-// 1. "center circle" renamed to "breathingCircle".
-// 2. "textCircle" at the center, same color as background, sized at min of breathingCircle.
-// 3. "limitCircle" controls max size of breathingCircle via scrolling.
-// 4. breathingCircle's speed no longer scroll-controlled; sin_speed fixed at 0.5.
-// 5. All assignments use '=>'.
-//
-// Scrolling ONLY affects the size of limitCircle.
-//
-// No functionality removed. Only syntax and order corrected.
+// name: Periphery.ck (Modified as requested)
 //-----------------------------------------------------------------------------
 
 // Set up the camera and background
@@ -70,25 +59,26 @@ CircleGeometry breathingCircle_geo;
 FlatMaterial breathingCircle_material;
 GMesh breathingCircle_mesh(breathingCircle_geo, breathingCircle_material) --> GG.scene();
 @(circle_center.x, circle_center.y, env_circle_z) => breathingCircle_mesh.pos;
-@(0, 0, 0) => breathingCircle_material.color; 
+@(0.992, 0.807, 0.388) => breathingCircle_material.color; 
 base_circle_size => float current_circle_size;
 current_circle_size => float previous_circle_size;
 1 => int was_increasing; 
 
-// textCircle
+// textCircle - make it smaller than min_circle_size, for example half:
 CircleGeometry textCircle_geo;
 FlatMaterial textCircle_material;
 GMesh textCircle_mesh(textCircle_geo, textCircle_material) --> GG.scene();
-@(0.992, 0.807, 0.388) => textCircle_material.color;
-textCircle_geo.build(min_circle_size, 100, 0.0, 2.0 * Math.PI);
+@(0, 0, 0) => textCircle_material.color;
+// Here we scale down by half:
+textCircle_geo.build(min_circle_size * 0.6, 100, 0.0, 2.0 * Math.PI);
 @(circle_center.x, circle_center.y, env_circle_z) => textCircle_mesh.pos;
 
 // Update breathingCircle size
 fun void updateCircleSize() {
     sin_time + (sin_speed * GG.dt()) => sin_time;
     limit_circle_size => float max_circle_size;
-    max_circle_size - ((max_circle_size - min_circle_size) / 2.0) * (1.0 + Math.cos(sin_time)) => current_circle_size;
-    breathingCircle_geo.build(current_circle_size, 64, 0.0, 2.0 * Math.PI);
+    max_circle_size - ((max_circle_size - min_circle_size * 0.6) / 2.0) * (1.0 + Math.cos(sin_time)) => current_circle_size;
+    breathingCircle_geo.build(current_circle_size, 100, 0.0, 2.0 * Math.PI);
 
     int is_increasing;
     if (current_circle_size > previous_circle_size) {
@@ -585,8 +575,9 @@ while (true) {
     float scroll_delta; GWindow.scrollY() => scroll_delta;
     (limit_circle_size + (scroll_delta * 0.05)) => limit_circle_size;
 
+    // Increase max limit to 3.0 * min_circle_size (instead of 2.0)
     if (limit_circle_size < min_circle_size) { min_circle_size => limit_circle_size; }
-    if (limit_circle_size > 2.0 * min_circle_size) { (2.0 * min_circle_size) => limit_circle_size; }
+    if (limit_circle_size > 3.0 * min_circle_size) { (3.0 * min_circle_size) => limit_circle_size; }
 
     updateCircleSize();
     limitCircle_geo.build(limit_circle_size, 100, 0.0, 2.0 * Math.PI);
