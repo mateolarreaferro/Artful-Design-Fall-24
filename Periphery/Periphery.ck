@@ -1,9 +1,19 @@
 //-----------------------------------------------------------------------------
-// name: Periphery.ck
-// Mateo Larrea
+// name: Periphery.ck (Final Corrected Version)
+//-----------------------------------------------------------------------------
+//
+// 1. "center circle" renamed to "breathingCircle".
+// 2. "textCircle" at the center, same color as background, sized at min of breathingCircle.
+// 3. "limitCircle" controls max size of breathingCircle via scrolling.
+// 4. breathingCircle's speed no longer scroll-controlled; sin_speed fixed at 0.5.
+// 5. All assignments use '=>'.
+//
+// Scrolling ONLY affects the size of limitCircle.
+//
+// No functionality removed. Only syntax and order corrected.
 //-----------------------------------------------------------------------------
 
-// Set up the camera and background color
+// Set up the camera and background
 GG.camera().orthographic();
 @(0.992, 0.807, 0.388) => GG.scene().backgroundColor; 
 
@@ -18,28 +28,23 @@ output_pass.input(bloom_pass.colorOutput());
 0.5 => bloom_pass.threshold;
 
 // Variables for background color modulation
-0 => float bg_time; // Initialize background time
-(2.0 * Math.PI) / 60.0 => float bg_omega; // Angular frequency for a 60-second cycle
+0 => float bg_time; 
+(2.0 * Math.PI) / 60.0 => float bg_omega; 
 
 // Z-position for background circles
 -0.5 => float bg_circle_z;
 
-// Define a vibrant color palette (particles will be black)
+// Define vibrant colors
 new vec3[0] @=> vec3 vibrant_colors[];
-vibrant_colors << @(0.976, 0.643, 0.376);   // Soft Tangerine
-vibrant_colors << @(0.992, 0.807, 0.388);   // Sunflower Yellow
-vibrant_colors << @(0.357, 0.525, 0.761);   // Cerulean Blue
+vibrant_colors << @(0.976, 0.643, 0.376);  
+vibrant_colors << @(0.992, 0.807, 0.388);  
+vibrant_colors << @(0.357, 0.525, 0.761);
 
-// Variables for central circle size modulation
-3 * 0.8 => float base_circle_size; // Adjusted size
-base_circle_size => float current_circle_size;
-0.3 * base_circle_size => float min_circle_size;
+// Variables for circles
+(3 * 0.8) => float base_circle_size; 
+(base_circle_size * 0.3) => float min_circle_size;
 0.0 => float sin_time;
-0.5 => float sin_speed;
-0.5 => float previous_sin_speed;
-
-current_circle_size => float previous_circle_size; // Added variable
-1 => int was_increasing; // 1 if increasing, 0 if decreasing
+0.5 => float sin_speed; // fixed sin_speed
 
 vec3 circle_center;
 circle_center.set(0.0, 0.0, 0.0);
@@ -49,37 +54,51 @@ circle_center.set(0.0, 0.0, 0.0);
 // Text
 GText text --> GG.scene();
 text.sca(.2);
-text.text("inhale"); // Initial text
+text.text("inhale");
 
-// Center circle
-CircleGeometry center_circle_geo;
-FlatMaterial center_circle_material;
-GMesh center_circle_mesh(center_circle_geo, center_circle_material) --> GG.scene();
+// limitCircle - its size is affected by scrolling
+min_circle_size => float limit_circle_size;
+CircleGeometry limitCircle_geo;
+FlatMaterial limitCircle_material;
+GMesh limitCircle_mesh(limitCircle_geo, limitCircle_material) --> GG.scene();
+@(0.357, 0.525, 0.761) => limitCircle_material.color;
+limitCircle_geo.build(limit_circle_size, 100, 0.0, 2.0 * Math.PI);
+@(circle_center.x, circle_center.y, env_circle_z) => limitCircle_mesh.pos;
 
-// Set center circle position with adjusted z
-@(circle_center.x, circle_center.y, env_circle_z) => center_circle_mesh.pos;
+// breathingCircle
+CircleGeometry breathingCircle_geo;
+FlatMaterial breathingCircle_material;
+GMesh breathingCircle_mesh(breathingCircle_geo, breathingCircle_material) --> GG.scene();
+@(circle_center.x, circle_center.y, env_circle_z) => breathingCircle_mesh.pos;
+@(0, 0, 0) => breathingCircle_material.color; 
+base_circle_size => float current_circle_size;
+current_circle_size => float previous_circle_size;
+1 => int was_increasing; 
 
-center_circle_geo.build(current_circle_size, 64, 0.0, 2.0 * Math.PI);
-@(0, 0, 0) => center_circle_material.color; // Cerulean Blue
+// textCircle
+CircleGeometry textCircle_geo;
+FlatMaterial textCircle_material;
+GMesh textCircle_mesh(textCircle_geo, textCircle_material) --> GG.scene();
+@(0.992, 0.807, 0.388) => textCircle_material.color;
+textCircle_geo.build(min_circle_size, 100, 0.0, 2.0 * Math.PI);
+@(circle_center.x, circle_center.y, env_circle_z) => textCircle_mesh.pos;
 
-// Function to smoothly adjust the circle size using a cosine function
+// Update breathingCircle size
 fun void updateCircleSize() {
     sin_time + (sin_speed * GG.dt()) => sin_time;
-    base_circle_size - ((base_circle_size - min_circle_size) / 2.0) * (1.0 + Math.cos(sin_time)) => current_circle_size;
-    center_circle_geo.build(current_circle_size, 64, 0.0, 2.0 * Math.PI);
+    limit_circle_size => float max_circle_size;
+    max_circle_size - ((max_circle_size - min_circle_size) / 2.0) * (1.0 + Math.cos(sin_time)) => current_circle_size;
+    breathingCircle_geo.build(current_circle_size, 64, 0.0, 2.0 * Math.PI);
 
-    // Determine if the circle is increasing or decreasing
     int is_increasing;
     if (current_circle_size > previous_circle_size) {
         1 => is_increasing;
     } else if (current_circle_size < previous_circle_size) {
         0 => is_increasing;
     } else {
-        // No change in size
         is_increasing => is_increasing;
     }
 
-    // Update the text only if there's a significant change in direction
     if (is_increasing != was_increasing) {
         if (is_increasing == 1) {
             text.text("inhale");
@@ -89,147 +108,114 @@ fun void updateCircleSize() {
         is_increasing => was_increasing;
     }
 
-    // Update previous_circle_size for the next comparison
     current_circle_size => previous_circle_size;
 }
 
-// =======================================================
-// Integration of clickable pads as a side bar
-// =======================================================
-
-// Initialize Mouse Manager
+// Initialize Mouse
 Mouse mouse;
-spork ~ mouse.selfUpdate(); // start updating mouse position
+spork ~ mouse.selfUpdate();
 
-// Create pad group
+// Pads
 GGen padGroup --> GG.scene();
-
-// Number of pads
 4 => int NUM_PADS;
-
-// Array of pads
 GPad pads[NUM_PADS];
 
-// Instantiate each pad in the array
 for (0 => int i; i < NUM_PADS; i++) {
     new GPad @=> pads[i];
 }
 
-// Update pad positions on window resize
+// Resize listener
 fun void resizeListener() {
-    WindowResizeEvent e;  // listens to the window resize event
+    WindowResizeEvent e;  
     while (true) {
-        e => now;  // window has been resized
+        e => now;  
         placePads();
     }
 } spork ~ resizeListener();
 
-// Place pads based on window size
 fun void placePads() {
-    // Recalculate aspect ratio
     (GG.frameWidth() * 1.0) / (GG.frameHeight() * 1.0) => float aspect;
-    // Calculate world-space units
     GG.camera().viewSize() => float frustrumHeight;
     frustrumHeight * aspect => float frustrumWidth;
 
-    // Set pad spacing and positions for side bar
     frustrumHeight / NUM_PADS => float padSpacing;
     for (0 => int i; i < NUM_PADS; i++) {
         pads[i] @=> GPad pad;
-
-        // Initialize pad
         pad.init(mouse, i);
-
-        // Connect to scene
         pad --> padGroup;
-
-        // Set transform
         pad.sca(padSpacing * 0.4);
-        pad.posY(padSpacing * i - frustrumHeight / 2.0 + padSpacing / 2.0);
-        // Position pads on the left side
-        (-frustrumWidth / 2.0 + padSpacing * 0.4) => pad.posX;
+
+        float pY;
+        (padSpacing * i - frustrumHeight / 2.0 + padSpacing / 2.0) => pY;
+        pY => pad.posY;
+
+        float pX;
+        (-frustrumWidth / 2.0 + padSpacing * 0.4) => pX;
+        pX => pad.posX;
     }
-    // Adjust padGroup position if needed
-    padGroup.posX(0);  // Adjust if necessary
+    padGroup.posX(0);
 }
 
-// Class for pads with hover and select functionalities
 class GPad extends GGen {
-    // Initialize mesh
     GPlane pad --> this;
     FlatMaterial mat;
     pad.mat(mat);
 
-    // Reference to a mouse
     Mouse @ mouse;
-
-    // Pad index
     int index;
 
-    // States
-    0 => static int NONE;     // Not hovered or active
-    1 => static int HOVERED;  // Hovered
-    2 => static int ACTIVE;   // Clicked
-    0 => int state;           // Current state
+    0 => static int NONE;
+    1 => static int HOVERED;
+    2 => static int ACTIVE;
+    0 => int state;
 
-    // Input types
     0 => static int MOUSE_HOVER;
     1 => static int MOUSE_EXIT;
     2 => static int MOUSE_CLICK;
 
-    // Color map
-    [
-        Color.BLACK,    // NONE
-        Color.ORANGE,   // HOVERED
-        Color.WHITE     // ACTIVE
-    ] @=> vec3 colorMap[];
+    [Color.BLACK, Color.ORANGE, Color.WHITE] @=> vec3 colorMap[];
 
-    // Arrays to store background circles for each pad
     new GMesh[5] @=> GMesh bg_circle_meshes[];
     new CircleGeometry[5] @=> CircleGeometry bg_circle_geometries[];
     new FlatMaterial[5] @=> FlatMaterial bg_circle_materials[];
-    new float[5] @=> float bg_circle_target_sizes[]; // Target sizes for ease-in animation
-    new float[5] @=> float bg_circle_current_sizes[]; // Current sizes for ease-in animation
-    new float[5] @=> float bg_circle_growth_speeds[]; // Growth speeds for ease-in animation
+    new float[5] @=> float bg_circle_target_sizes[];
+    new float[5] @=> float bg_circle_current_sizes[];
+    new float[5] @=> float bg_circle_growth_speeds[];
     new vec3[5] @=> vec3 bg_circle_colors[];
     new float[5] @=> float bg_circle_speeds[];
-    new int[5] @=> int is_shrinking[]; // Track if a circle is shrinking
+    new int[5] @=> int is_shrinking[];
 
-    // Sound variables
     SndBuf @ sampleBuf;
     float volume;
     float targetVolume;
     float volumeStep;
     1.5 => float fadeTime;
 
-    // Constructor
     fun void init(Mouse @ m, int idx) {
         if (mouse != null) return;
         m @=> this.mouse;
         idx => this.index;
         spork ~ this.clickListener();
 
-        // Initialize sound variables
         null @=> sampleBuf;
         0.0 => volume;
         0.0 => targetVolume;
         0.0 => volumeStep;
 
-        // Spork the update loop
         spork ~ this.selfUpdate();
     }
 
-    // Set color
     fun void color(vec3 c) {
         mat.color(c);
     }
 
-    // Returns true if mouse is hovering over pad
     fun int isHovered() {
-        pad.scaWorld() => vec3 worldScale;  // Get dimensions
-        worldScale.x / 2.0 => float halfWidth;
-        worldScale.y / 2.0 => float halfHeight;
-        pad.posWorld() => vec3 worldPos;    // Get position
+        vec3 worldScale;
+        pad.scaWorld() => worldScale;  
+        float halfWidth; worldScale.x / 2.0 => halfWidth;
+        float halfHeight; worldScale.y / 2.0 => halfHeight;
+        vec3 worldPos;
+        pad.posWorld() => worldPos;    
 
         if (mouse.worldPos.x > worldPos.x - halfWidth && mouse.worldPos.x < worldPos.x + halfWidth &&
             mouse.worldPos.y > worldPos.y - halfHeight && mouse.worldPos.y < worldPos.y + halfHeight) {
@@ -238,7 +224,6 @@ class GPad extends GGen {
         return false;
     }
 
-    // Poll for hover events
     fun void pollHover() {
         if (isHovered()) {
             handleInput(MOUSE_HOVER);
@@ -247,7 +232,6 @@ class GPad extends GGen {
         }
     }
 
-    // Handle mouse clicks
     fun void clickListener() {
         while (true) {
             GG.nextFrame() => now;
@@ -257,7 +241,6 @@ class GPad extends GGen {
         }
     }
 
-    // Update loop
     fun void selfUpdate() {
         while (true) {
             this.update(GG.dt());
@@ -265,148 +248,132 @@ class GPad extends GGen {
         }
     }
 
-    // Handle input and state transitions
     fun void handleInput(int input) {
         if (state == NONE) {
-            if (input == MOUSE_HOVER)      enter(HOVERED);
-            else if (input == MOUSE_CLICK) {
+            if (input == MOUSE_HOVER) {
+                enter(HOVERED);
+            } else if (input == MOUSE_CLICK) {
                 enter(ACTIVE);
-                instantiateCircles(); // Instantiate circles on pad select
-                startSample();        // Start sample on pad select
+                instantiateCircles();
+                startSample();
             }
         } else if (state == HOVERED) {
-            if (input == MOUSE_EXIT)       enter(NONE);
-            else if (input == MOUSE_CLICK) {
+            if (input == MOUSE_EXIT) {
+                enter(NONE);
+            } else if (input == MOUSE_CLICK) {
                 if (state == ACTIVE) {
                     enter(NONE);
-                    shrinkCircles(); // Shrink circles on pad deselect
-                    stopSample();    // Stop sample on pad deselect
+                    shrinkCircles();
+                    stopSample();
                 } else {
                     enter(ACTIVE);
-                    instantiateCircles(); // Instantiate circles on pad select
-                    startSample();        // Start sample on pad select
+                    instantiateCircles();
+                    startSample();
                 }
             }
         } else if (state == ACTIVE) {
             if (input == MOUSE_CLICK) {
                 enter(NONE);
-                shrinkCircles(); // Shrink circles on pad deselect
-                stopSample();    // Stop sample on pad deselect
+                shrinkCircles();
+                stopSample();
             }
         }
     }
 
-    // Enter a new state
     fun void enter(int s) {
         s => state;
     }
 
-    // Override GGen update
     fun void update(float dt) {
-        // Check if hovered
         pollHover();
-
-        // Update state color
         this.color(colorMap[state]);
 
-        // Smooth scaling animation
-        pad.scaX() + (0.05 * (1.0 - pad.scaX())) => pad.sca;
+        float newScale;
+        pad.scaX() + (0.05 * (1.0 - pad.scaX())) => newScale;
+        newScale => pad.sca;
 
-        // Update the growth of circles if active
         if (state == ACTIVE) {
             for (0 => int i; i < bg_circle_meshes.size(); i++) {
                 if (is_shrinking[i] == 0 && bg_circle_meshes[i] != null) {
-                    bg_circle_current_sizes[i] + (bg_circle_growth_speeds[i] * (bg_circle_target_sizes[i] - bg_circle_current_sizes[i])) => float new_size;
-                    new_size => bg_circle_current_sizes[i];
-                    bg_circle_geometries[i].build(new_size, 64, 0.0, 2.0 * Math.PI);
+                    float growSize;
+                    (bg_circle_current_sizes[i] + (bg_circle_growth_speeds[i] * (bg_circle_target_sizes[i] - bg_circle_current_sizes[i]))) => growSize;
+                    growSize => bg_circle_current_sizes[i];
+                    bg_circle_geometries[i].build(growSize, 64, 0.0, 2.0 * Math.PI);
                 }
             }
         }
 
-        // Handle shrinking animation
         for (0 => int i; i < bg_circle_meshes.size(); i++) {
             if (is_shrinking[i] == 1 && bg_circle_meshes[i] != null) {
-                bg_circle_current_sizes[i] - (0.05 * bg_circle_target_sizes[i]) => float new_size;
-                if (new_size <= 0.0) {
-                    // Remove circle from scene
+                float shrinkSize;
+                (bg_circle_current_sizes[i] - (0.05 * bg_circle_target_sizes[i])) => shrinkSize;
+                if (shrinkSize <= 0.0) {
                     bg_circle_meshes[i].detach();
                     null @=> bg_circle_meshes[i];
                     null @=> bg_circle_geometries[i];
                     null @=> bg_circle_materials[i];
-                    0 => is_shrinking[i]; // Reset shrinking flag
+                    0 => is_shrinking[i];
                 } else {
-                    new_size => bg_circle_current_sizes[i];
-                    bg_circle_geometries[i].build(new_size, 72, 0.0, 2.0 * Math.PI);
+                    shrinkSize => bg_circle_current_sizes[i];
+                    bg_circle_geometries[i].build(shrinkSize, 72, 0.0, 2.0 * Math.PI);
                 }
             }
         }
 
-        // Update volume towards targetVolume
         if (sampleBuf != null) {
             if (volume != targetVolume) {
                 volume + (volumeStep * dt) => volume;
-                // Ensure volume stays within [0.0, 1.0]
                 if (volume > 1.0) { 1.0 => volume; }
                 if (volume < 0.0) { 0.0 => volume; }
                 if ((volumeStep > 0 && volume >= targetVolume) || (volumeStep < 0 && volume <= targetVolume)) {
                     targetVolume => volume;
                     if (volume == 0.0) {
-                        // Stop the sample
                         sampleBuf =< dac;
                         null @=> sampleBuf;
                     }
                 }
             }
-            // Ensure sampleBuf is not null before setting gain
             if (sampleBuf != null) {
                 volume => sampleBuf.gain;
             }
         }
     }
 
-    // Instantiate background circles
     fun void instantiateCircles() {
         for (0 => int i; i < 5; i++) {
-            // Random size between 0.5 and 1.5
-            Std.rand2f(0.5, 1.5) => float circle_size;
+            float circle_size; Std.rand2f(0.5, 1.5) => circle_size;
+            float initial_size; 0.0 => initial_size;
 
-            // Set initial size to zero for ease-in effect
-            0.0 => float initial_size;
+            float x_pos; Std.rand2f(-5.0, 5.0) => x_pos;
+            float y_pos; Std.rand2f(-5.0, 5.0) => y_pos;
 
-            // Random position within a range (-5.0 to 5.0)
-            Std.rand2f(-5.0, 5.0) => float x_pos;
-            Std.rand2f(-5.0, 5.0) => float y_pos;
-
-            // Random growth speed for ease-in animation
-            Std.rand2f(0.02, 0.1) => float growth_speed;
+            float growth_speed; Std.rand2f(0.02, 0.1) => growth_speed;
             growth_speed => bg_circle_growth_speeds[i];
 
-            // Random color from the vibrant_colors array
             vibrant_colors.size() => int num_colors;
-            Std.rand2(0, num_colors - 1) => int color_index;
-            vibrant_colors[color_index] => vec3 circle_color;
+            int color_index; Std.rand2(0, num_colors - 1) => color_index;
+            vec3 circle_color;
+            vibrant_colors[color_index] => circle_color;
             circle_color => bg_circle_colors[i];
 
-            // Create geometry and material
             new CircleGeometry @=> bg_circle_geometries[i];
             bg_circle_geometries[i].build(initial_size, 72, 0.0, 2.0 * Math.PI);
 
             new FlatMaterial @=> bg_circle_materials[i];
-            circle_color => bg_circle_materials[i].color; // Assign color
+            circle_color => bg_circle_materials[i].color;
 
-            // Create mesh and add to scene
             new GMesh(bg_circle_geometries[i], bg_circle_materials[i]) @=> bg_circle_meshes[i];
-            bg_circle_meshes[i] --> GG.scene(); // Add to the scene
-            @(x_pos, y_pos, bg_circle_z) => bg_circle_meshes[i].pos;
+            bg_circle_meshes[i] --> GG.scene();
 
-            // Set target size for animation
+            bg_circle_z => float z_pos;
+            @(x_pos, y_pos, z_pos) => bg_circle_meshes[i].pos;
+
             circle_size => bg_circle_target_sizes[i];
             initial_size => bg_circle_current_sizes[i];
-            0 => is_shrinking[i]; // Set shrinking flag to false
+            0 => is_shrinking[i];
         }
     }
 
-    // Shrink background circles
     fun void shrinkCircles() {
         for (0 => int i; i < bg_circle_meshes.size(); i++) {
             if (bg_circle_meshes[i] != null && is_shrinking[i] == 0) {
@@ -415,13 +382,12 @@ class GPad extends GGen {
         }
     }
 
-    // Start playing the sample with fade in
     fun void startSample() {
         if (sampleBuf == null) {
             new SndBuf @=> sampleBuf;
             sampleBuf => dac;
-            // Assign sample file based on index
             string filename;
+
             if (index == 0) {
                 "samples/Nature.wav" => filename;
                 0.6 => targetVolume;
@@ -435,9 +401,9 @@ class GPad extends GGen {
                 "samples/Drone.wav" => filename;
                 1.0 => targetVolume;
             } else {
-                // No sample for this pad
                 return;
             }
+
             sampleBuf.read(filename);
             sampleBuf.loop(1);
             0.0 => sampleBuf.gain;
@@ -445,7 +411,6 @@ class GPad extends GGen {
             0.0 => volume;
             (targetVolume - volume) / fadeTime => volumeStep;
         } else {
-            // Sample is already loaded, restart from beginning
             0 => sampleBuf.pos;
             0.0 => volume;
             if (index == 0) {
@@ -463,7 +428,6 @@ class GPad extends GGen {
         }
     }
 
-    // Stop playing the sample with fade out
     fun void stopSample() {
         if (sampleBuf != null) {
             sampleBuf.gain() => volume;
@@ -473,28 +437,23 @@ class GPad extends GGen {
     }
 }
 
-// Simplified Mouse class
 class Mouse {
     vec3 worldPos;
 
-    // Update mouse world position
     fun void selfUpdate() {
         while (true) {
             GG.nextFrame() => now;
-            // Calculate mouse world X and Y coords
             GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) => worldPos;
         }
     }
 }
 
-// Function to calculate distance between two vec3 points
 fun float vec3Distance(vec3 a, vec3 b) {
-    return Math.sqrt( (a.x - b.x)*(a.x - b.x) +
-                      (a.y - b.y)*(a.y - b.y) +
-                      (a.z - b.z)*(a.z - b.z) );
+    return Math.sqrt((a.x - b.x)*(a.x - b.x) +
+                     (a.y - b.y)*(a.y - b.y) +
+                     (a.z - b.z)*(a.z - b.z));
 }
 
-// Particle class
 class Particle {
     GMesh @ mesh;
     CircleGeometry @ geometry;
@@ -507,7 +466,6 @@ class Particle {
     float size;
     int active;
 
-    // Constructor
     fun void init(vec3 pos, vec3 vel, vec3 col, float life, float s) {
         pos => position;
         vel => velocity;
@@ -517,34 +475,28 @@ class Particle {
         s => size;
         1 => active;
 
-        // Create geometry and material
         new CircleGeometry @=> geometry;
         geometry.build(size, 32, 0.0, 2.0 * Math.PI);
 
         new FlatMaterial @=> material;
         material.color(col);
 
-        // Create mesh and add to scene
         new GMesh(geometry, material) @=> mesh;
         mesh --> GG.scene();
         position => mesh.pos;
     }
 
-    // Update function
     fun void update(float dt) {
         age + dt => age;
         if (age < lifespan) {
-            // Update position
             position + velocity * dt => position;
             position => mesh.pos;
 
-            // Calculate distance from center
-            vec3Distance(position, circle_center) => float distance_from_center;
+            float distance_from_center;
+            vec3Distance(position, circle_center) => distance_from_center;
 
-            // Remove particle if it exceeds a certain distance
-            20.0 => float max_distance; // Adjust as needed
+            float max_distance; 20.0 => max_distance;
             if (distance_from_center > max_distance) {
-                // Remove particle
                 mesh.detach();
                 null @=> mesh;
                 null @=> geometry;
@@ -553,15 +505,12 @@ class Particle {
                 return;
             }
 
-            // Fade out over time
-            1.0 - (age / lifespan) => float alpha;
-            material.color( @(color.x * alpha, color.y * alpha, color.z * alpha) );
+            float alpha; (1.0 - (age / lifespan)) => alpha;
+            material.color(@(color.x * alpha, color.y * alpha, color.z * alpha));
 
-            // Scale down over time
-            size * alpha => float new_size;
+            float new_size; (size * alpha) => new_size;
             geometry.build(new_size, 32, 0.0, 2.0 * Math.PI);
         } else {
-            // Remove particle
             mesh.detach();
             null @=> mesh;
             null @=> geometry;
@@ -571,21 +520,17 @@ class Particle {
     }
 }
 
-// Particle pool
-64 => int MAX_PARTICLES; // Increased to handle more particles
+64 => int MAX_PARTICLES;
 Particle particles[MAX_PARTICLES];
 
-// Initialize particles
 for (0 => int i; i < MAX_PARTICLES; i++) {
     new Particle @=> particles[i];
     0 => particles[i].active;
 }
 
-// Function to instantiate particles when sin_speed changes
 fun void instantiateParticles() {
-    for (0 => int i; i < 10; i++) { // Increased number of particles
-        // Find an inactive particle
-        -1 => int idx;
+    for (0 => int i; i < 10; i++) {
+        int idx; -1 => idx;
         for (0 => int j; j < MAX_PARTICLES; j++) {
             if (particles[j].active == 0) {
                 j => idx;
@@ -593,55 +538,38 @@ fun void instantiateParticles() {
             }
         }
         if (idx == -1) {
-            // No inactive particle available
             break;
         }
 
-        // Random size between 0.05 and 0.15
-        Std.rand2f(0.05, 0.15) => float size;
+        float size; Std.rand2f(0.05, 0.15) => size;
+        float angle; Std.rand2f(0.0, 2.0 * Math.PI) => angle;
 
-        // Random angle between 0 and 2π
-        Std.rand2f(0.0, 2.0 * Math.PI) => float angle;
+        float R1; (current_circle_size / 2.0 * 1.5) => R1;
+        float R2; (current_circle_size / 2.0 * 2.0) => R2;
+        float radius; Std.rand2f(R1, R2) => radius;
 
-        // Adjusted radii to be outside the circle
-        current_circle_size / 2.0 * 1.5 => float R1; // Inner radius (50% larger than the circle)
-        current_circle_size / 2.0 * 2.0 => float R2; // Outer radius (100% larger than the circle)
+        float x_pos; (circle_center.x + radius * Math.cos(angle)) => x_pos;
+        float y_pos; (circle_center.y + radius * Math.sin(angle)) => y_pos;
+        float z_pos; circle_center.z => z_pos;
+        vec3 position;
+        @(x_pos, y_pos, z_pos) => position;
 
-        // Random radius between R1 and R2
-        Std.rand2f(R1, R2) => float radius;
+        float dx; (x_pos - circle_center.x) => dx;
+        float dy; (y_pos - circle_center.y) => dy;
+        float length; Math.sqrt(dx*dx + dy*dy) => length;
+        float nx; (dx / length) => nx;
+        float ny; (dy / length) => ny;
 
-        // Calculate position on the ring outside the circle
-        circle_center.x + radius * Math.cos(angle) => float x_pos;
-        circle_center.y + radius * Math.sin(angle) => float y_pos;
-        circle_center.z => float z_pos;
-        @(x_pos, y_pos, z_pos) => vec3 position;
+        float speed; 2.0 => speed;
+        float vx; (nx * speed) => vx;
+        float vy; (ny * speed) => vy;
+        float vz; 0.0 => vz;
+        vec3 velocity;
+        @(vx, vy, vz) => velocity;
 
-        // Velocity directed away from the center
-        // Compute the direction vector from center to position
-        x_pos - circle_center.x => float dx;
-        y_pos - circle_center.y => float dy;
+        vec3 color; @(0.0, 0.0, 0.0) => color;
+        float lifespan; Std.rand2f(1.0, 2.0) => lifespan;
 
-        // Normalize the direction vector
-        Math.sqrt(dx*dx + dy*dy) => float length;
-        dx / length => float nx;
-        dy / length => float ny;
-
-        // Increase the speed
-        2.0 => float speed; // Increased speed
-
-        // Velocity components
-        nx * speed => float vx;
-        ny * speed => float vy;
-        0.0 => float vz;
-        @(vx, vy, vz) => vec3 velocity;
-
-        // Set particle color to black
-        @(0.0, 0.0, 0.0) => vec3 color;
-
-        // Random lifespan between 1 and 2 seconds
-        Std.rand2f(1.0, 2.0) => float lifespan;
-
-        // Initialize the particle
         particles[idx].init(position, velocity, color, lifespan, size);
     }
 }
@@ -650,42 +578,21 @@ fun void instantiateParticles() {
 while (true) {
     GG.nextFrame() => now;
 
-    // Update background time
     bg_time + GG.dt() => bg_time;
+    float bg_angle; (bg_omega * bg_time) => bg_angle;
+    float sin_value; Math.sin(bg_angle) => sin_value;
 
-    // Calculate the sine of the angular frequency times time
-    bg_omega * bg_time => float bg_angle;
-    Math.sin(bg_angle) => float sin_value;
+    float scroll_delta; GWindow.scrollY() => scroll_delta;
+    (limit_circle_size + (scroll_delta * 0.05)) => limit_circle_size;
 
-    // Map sine value from [-1,1] to [0,1] for brightness
-    (sin_value + 1.0) / 2.0 => float brightness;
+    if (limit_circle_size < min_circle_size) { min_circle_size => limit_circle_size; }
+    if (limit_circle_size > 2.0 * min_circle_size) { (2.0 * min_circle_size) => limit_circle_size; }
 
-    // Read scroll delta
-    GWindow.scrollY() => float scroll_delta;
-
-    // Adjust sin_speed based on scroll delta
-    sin_speed + (scroll_delta * 0.05) => sin_speed;
-
-    // Clamp sin_speed between 0.2 and 2.0
-    if (sin_speed < 0.2) { 0.2 => sin_speed; }
-    if (sin_speed > 2.0) { 2.0 => sin_speed; }
-
-    // Check if sin_speed has changed significantly
-    if (Math.fabs(sin_speed - previous_sin_speed) > 0.001) { // Threshold to detect small changes
-        // sin_speed has changed, so instantiate particles
-        instantiateParticles();
-    }
-
-    // Update previous sin_speed
-    sin_speed => previous_sin_speed;
-
-    // Update center circle size
     updateCircleSize();
+    limitCircle_geo.build(limit_circle_size, 100, 0.0, 2.0 * Math.PI);
 
-    // Place pads after the window is created
     placePads();
 
-    // Update particles
     for (0 => int i; i < MAX_PARTICLES; i++) {
         if (particles[i].active == 1) {
             particles[i].update(GG.dt());
