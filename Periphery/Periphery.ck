@@ -1,7 +1,3 @@
-//-----------------------------------------------------------------------------
-// name: Periphery.ck (Modified as requested)
-//-----------------------------------------------------------------------------
-
 // Set up the camera and background
 GG.camera().orthographic();
 @(0.992, 0.807, 0.388) => GG.scene().backgroundColor; 
@@ -73,11 +69,26 @@ GMesh textCircle_mesh(textCircle_geo, textCircle_material) --> GG.scene();
 textCircle_geo.build(min_circle_size * 0.6, 100, 0.0, 2.0 * Math.PI);
 @(circle_center.x, circle_center.y, env_circle_z) => textCircle_mesh.pos;
 
-// Update breathingCircle size
 fun void updateCircleSize() {
-    sin_time + (sin_speed * GG.dt()) => sin_time;
     limit_circle_size => float max_circle_size;
-    max_circle_size - ((max_circle_size - min_circle_size * 0.6) / 2.0) * (1.0 + Math.cos(sin_time)) => current_circle_size;
+    (max_circle_size - (min_circle_size * 0.6)) / 2.0 => float amplitude;
+
+    // Avoid extremely small amplitude
+    if (amplitude < 0.0001) { 
+        0.0001 => amplitude; 
+    }
+
+    // Adjusted radius_rate to achieve desired times (2 s at min, 10 s at max)
+    0.25 => float radius_rate;
+
+    // sin_speed = radius_rate / amplitude
+    radius_rate / amplitude => float sin_speed;
+
+    // Increment sin_time
+    sin_time + (sin_speed * GG.dt()) => sin_time;
+
+    max_circle_size - (amplitude * (1.0 + Math.cos(sin_time))) => current_circle_size;
+
     breathingCircle_geo.build(current_circle_size, 100, 0.0, 2.0 * Math.PI);
 
     int is_increasing;
@@ -86,7 +97,7 @@ fun void updateCircleSize() {
     } else if (current_circle_size < previous_circle_size) {
         0 => is_increasing;
     } else {
-        is_increasing => is_increasing;
+        was_increasing => is_increasing;
     }
 
     if (is_increasing != was_increasing) {
@@ -100,6 +111,7 @@ fun void updateCircleSize() {
 
     current_circle_size => previous_circle_size;
 }
+
 
 // Initialize Mouse
 Mouse mouse;
