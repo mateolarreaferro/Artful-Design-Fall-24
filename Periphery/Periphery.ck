@@ -49,7 +49,7 @@ circle_center.set(0.0, 0.0, 0.0);
 // Text
 GText text --> GG.scene();
 text.sca(.2);
-text.text("breathe in"); // Initial text
+text.text("inhale"); // Initial text
 
 // Center circle
 CircleGeometry center_circle_geo;
@@ -82,9 +82,9 @@ fun void updateCircleSize() {
     // Update the text only if there's a significant change in direction
     if (is_increasing != was_increasing) {
         if (is_increasing == 1) {
-            text.text("breathe in");
+            text.text("inhale");
         } else {
-            text.text("breathe out");
+            text.text("exhale");
         }
         is_increasing => was_increasing;
     }
