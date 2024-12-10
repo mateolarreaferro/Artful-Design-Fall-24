@@ -139,24 +139,43 @@ fun void placePads() {
     (GG.frameWidth() * 1.0) / (GG.frameHeight() * 1.0) => float aspect;
     GG.camera().viewSize() => float frustrumHeight;
     frustrumHeight * aspect => float frustrumWidth;
-
+    
+    // Original spacing calculation remains the same
     frustrumHeight / NUM_PADS => float padSpacing;
+    
+    // The top pad position is defined as before, without change
+    float topPadY;
+    (-frustrumHeight / 2.0 + padSpacing / 2.0) => topPadY;
+    
+    // Use a smaller gap for subsequent pads
+    float vertical_gap;
+    (padSpacing * 0.4) => vertical_gap; // Adjust factor as needed
+    
     for (0 => int i; i < NUM_PADS; i++) {
         pads[i] @=> GPad pad;
         pad.init(mouse, i);
         pad --> padGroup;
-        pad.sca(padSpacing * 0.4);
-
+        
+        // Keep the pad size as before
+        (padSpacing * 0.3) => pad.sca;
+        
         float pY;
-        (padSpacing * i - frustrumHeight / 2.0 + padSpacing / 2.0) => pY;
+        if (i == 0) {
+            // Top pad remains exactly at the original position
+            topPadY => pY;
+        } else {
+            // Subsequent pads are placed closer together
+            (topPadY + i * vertical_gap) => pY;
+        }
         pY => pad.posY;
-
+        
         float pX;
         (-frustrumWidth / 2.0 + padSpacing * 0.4) => pX;
         pX => pad.posX;
     }
     padGroup.posX(0);
 }
+
 
 class GPad extends GGen {
     GPlane pad --> this;
@@ -300,7 +319,7 @@ class GPad extends GGen {
                     float growSize;
                     (bg_circle_current_sizes[i] + (bg_circle_growth_speeds[i] * (bg_circle_target_sizes[i] - bg_circle_current_sizes[i]))) => growSize;
                     growSize => bg_circle_current_sizes[i];
-                    bg_circle_geometries[i].build(growSize, 64, 0.0, 2.0 * Math.PI);
+                    bg_circle_geometries[i].build(growSize, 100, 0.0, 2.0 * Math.PI);
                 }
             }
         }
@@ -317,7 +336,7 @@ class GPad extends GGen {
                     0 => is_shrinking[i];
                 } else {
                     shrinkSize => bg_circle_current_sizes[i];
-                    bg_circle_geometries[i].build(shrinkSize, 72, 0.0, 2.0 * Math.PI);
+                    bg_circle_geometries[i].build(shrinkSize, 100, 0.0, 2.0 * Math.PI);
                 }
             }
         }
@@ -359,7 +378,7 @@ class GPad extends GGen {
             circle_color => bg_circle_colors[i];
 
             new CircleGeometry @=> bg_circle_geometries[i];
-            bg_circle_geometries[i].build(initial_size, 72, 0.0, 2.0 * Math.PI);
+            bg_circle_geometries[i].build(initial_size, 100, 0.0, 2.0 * Math.PI);
 
             new FlatMaterial @=> bg_circle_materials[i];
             circle_color => bg_circle_materials[i].color;
