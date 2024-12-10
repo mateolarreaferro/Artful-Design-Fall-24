@@ -89,7 +89,7 @@ fun void updateCircleSize() {
 
     max_circle_size - (amplitude * (1.0 + Math.cos(sin_time))) => current_circle_size;
 
-    breathingCircle_geo.build(current_circle_size, 100, 0.0, 2.0 * Math.PI);
+    breathingCircle_geo.build(current_circle_size - 0.005, 100, 0.0, 2.0 * Math.PI);
 
     int is_increasing;
     if (current_circle_size > previous_circle_size) {
