@@ -321,7 +321,10 @@ fun void placePads()
         q + 1 => q;
     }
 
-    // Place top pads above the existing ones
+    // Place top pads at a greater vertical distance above the existing ones
+    // For example, use an additional multiplier (like 2.0) to increase spacing.
+     1.4 => float topPadsOffsetFactor; // adjust this factor as needed
+
     int i;
     0 => i;
     while(i<NUM_TOP_PADS)
@@ -332,7 +335,8 @@ fun void placePads()
         (padSpacing * 0.3) => topPads[i].sca;
 
         float pY;
-        (topPadY + ((NUM_PADS + i) * vertical_gap)) => pY;
+        // Increase the vertical distance by using 'topPadsOffsetFactor'
+        (topPadY + ((NUM_PADS + i) * vertical_gap * topPadsOffsetFactor)) => pY;
         pY => topPads[i].posY;
 
         float pX;
@@ -344,6 +348,7 @@ fun void placePads()
 
     padGroup.posX(0);
 }
+
 
 class GPad extends GGen
 {
