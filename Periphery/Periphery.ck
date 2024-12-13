@@ -1,6 +1,43 @@
 // Set up the camera and background
 GG.camera().orthographic();
 
+// Global variables for inhalation pads
+SndBuf inhalationInhale1, inhalationExhale1, inhalationInhale2, inhalationExhale2;
+0 => int inhalationPadSelection; // 0=none,1=first top pad,2=second top pad
+
+// Load short inhale/exhale samples
+new SndBuf @=> inhalationInhale1;
+new SndBuf @=> inhalationExhale1;
+new SndBuf @=> inhalationInhale2;
+new SndBuf @=> inhalationExhale2;
+
+inhalationInhale1.read("samples/sample.wav");
+inhalationExhale1.read("samples/sample2.wav");
+inhalationInhale2.read("samples/sample3.wav");
+inhalationExhale2.read("samples/sample4.wav");
+
+inhalationInhale1 => dac;
+inhalationExhale1 => dac;
+inhalationInhale2 => dac;
+inhalationExhale2 => dac;
+
+inhalationInhale1.gain(0);
+inhalationExhale1.gain(0);
+inhalationInhale2.gain(0);
+inhalationExhale2.gain(0);
+
+inhalationInhale1.loop(0);
+inhalationExhale1.loop(0);
+inhalationInhale2.loop(0);
+inhalationExhale2.loop(0);
+
+fun void playShortSample(SndBuf buf)
+{
+    buf.pos(0);
+    buf.gain(1.0);
+    buf.play();
+}
+
 // Default scenario colors (when no pads are selected)
 vec3 default_background_color;
 default_background_color.set(0.992, 0.807, 0.388);
@@ -104,8 +141,6 @@ CircleGeometry breathingCircle_geo;
 FlatMaterial breathingCircle_material;
 GMesh breathingCircle_mesh(breathingCircle_geo, breathingCircle_material) --> GG.scene();
 @(circle_center.x, circle_center.y, env_circle_z) => breathingCircle_mesh.pos;
-
-// Set the breathingCircle color to match the background
 breathingCircle_material.color(@(default_background_color.x, default_background_color.y, default_background_color.z));
 
 base_circle_size => float current_circle_size;
@@ -159,10 +194,28 @@ fun void updateCircleSize()
         if (is_increasing == 1)
         {
             text.text("inhale");
+            // Play inhale sample if selected
+            if (inhalationPadSelection == 1)
+            {
+                playShortSample(inhalationInhale1);
+            }
+            else if (inhalationPadSelection == 2)
+            {
+                playShortSample(inhalationInhale2);
+            }
         }
         else
         {
             text.text("exhale");
+            // Play exhale sample if selected
+            if (inhalationPadSelection == 1)
+            {
+                playShortSample(inhalationExhale1);
+            }
+            else if (inhalationPadSelection == 2)
+            {
+                playShortSample(inhalationExhale2);
+            }
         }
         is_increasing => was_increasing;
     }
@@ -187,10 +240,14 @@ class Mouse
 Mouse mouse;
 spork ~ mouse.selfUpdate();
 
-// Pads
+// Original 4 Pads
 GGen padGroup --> GG.scene();
 4 => int NUM_PADS;
 GPad pads[NUM_PADS];
+
+// Two new top pads for inhale/exhale selection
+2 => int NUM_TOP_PADS;
+GPad topPads[NUM_TOP_PADS];
 
 int p;
 0 => p;
@@ -198,6 +255,14 @@ while(p<NUM_PADS)
 {
     new GPad @=> pads[p];
     p + 1 => p;
+}
+
+int tp;
+0 => tp;
+while(tp<NUM_TOP_PADS)
+{
+    new GPad @=> topPads[tp];
+    tp + 1 => tp;
 }
 
 // Resize listener
@@ -227,6 +292,7 @@ fun void placePads()
     
     int q;
     0 => q;
+    // Place original 4 pads exactly as before
     while(q<NUM_PADS)
     {
         pads[q] @=> GPad pad;
@@ -242,7 +308,7 @@ fun void placePads()
         }
         else
         {
-            topPadY + (q * vertical_gap) => pY;
+            (topPadY + (q * vertical_gap)) => pY;
         }
         pY => pad.posY;
         
@@ -252,6 +318,27 @@ fun void placePads()
 
         q + 1 => q;
     }
+
+    int i;
+    0 => i;
+    while(i<NUM_TOP_PADS)
+    {
+        topPads[i].init(mouse, 100+i); // distinct index to differentiate them
+        topPads[i] --> padGroup;
+
+        (padSpacing * 0.3) => topPads[i].sca;
+
+        float pY;
+        (topPadY + ((NUM_PADS + i) * vertical_gap)) => pY;
+        pY => topPads[i].posY;
+
+        float pX;
+        (-frustrumWidth / 2.0 + padSpacing * 0.4) => pX;
+        pX => topPads[i].posX;
+
+        i + 1 => i;
+    }
+
     padGroup.posX(0);
 }
 
@@ -394,58 +481,102 @@ class GPad extends GGen
         }
         else if (input == MOUSE_CLICK)
         {
-            if (state == ACTIVE)
+            if (this.index >= 100 && this.index < 102)
             {
-                // deactivate
-                enter(NONE);
-                shrinkCircles();
-                stopSample();
-                if (GPad.activePad == this)
+                // Top inhalation pads
+                if (state == ACTIVE)
                 {
-                    null @=> GPad.activePad;
-                    default_background_color => GG.scene().backgroundColor;
-                    int c;
-                    0 => c;
-                    while(c<3)
+                    // deactivate
+                    enter(NONE);
+                    shrinkCircles();
+                    stopSample(); // no ambience for top pads
+                    if (GPad.activePad == this)
                     {
-                        default_vibrant_colors[c].x => float vx;
-                        default_vibrant_colors[c].y => float vy;
-                        default_vibrant_colors[c].z => float vz;
-                        vibrant_colors[c].set(vx, vy, vz);
-                        c + 1 => c;
+                        null @=> GPad.activePad;
                     }
-                    breathingCircle_material.color(@(default_background_color.x, default_background_color.y, default_background_color.z));
+                    0 => inhalationPadSelection;
+                }
+                else
+                {
+                    // activate this top pad, deactivate the other if needed
+                    if (GPad.activePad != null && GPad.activePad.index >=100 && GPad.activePad.index<102 && GPad.activePad != this)
+                    {
+                        GPad.activePad.enter(NONE);
+                        GPad.activePad.shrinkCircles();
+                        GPad.activePad.stopSample();
+                        null @=> GPad.activePad;
+                    }
+
+                    enter(ACTIVE);
+                    instantiateCircles();
+                    this @=> GPad.activePad;
+
+                    if (this.index == 100)
+                    {
+                        1 => inhalationPadSelection;
+                    }
+                    else
+                    {
+                        2 => inhalationPadSelection;
+                    }
                 }
             }
             else
             {
-                // activate this pad, deactivate others
-                if (GPad.activePad != null && GPad.activePad != this)
+                // Ambience pads (index 0 to 3)
+                if (state == ACTIVE)
                 {
-                    GPad.activePad.enter(NONE);
-                    GPad.activePad.shrinkCircles();
-                    GPad.activePad.stopSample();
-                    null @=> GPad.activePad;
+                    // deactivate
+                    enter(NONE);
+                    shrinkCircles();
+                    stopSample();
+                    if (GPad.activePad == this)
+                    {
+                        null @=> GPad.activePad;
+                        default_background_color => GG.scene().backgroundColor;
+                        int c;
+                        0 => c;
+                        while(c<3)
+                        {
+                            default_vibrant_colors[c].x => float vx;
+                            default_vibrant_colors[c].y => float vy;
+                            default_vibrant_colors[c].z => float vz;
+                            vibrant_colors[c].set(vx, vy, vz);
+                            c + 1 => c;
+                        }
+                        breathingCircle_material.color(@(default_background_color.x, default_background_color.y, default_background_color.z));
+                    }
                 }
-
-                enter(ACTIVE);
-                instantiateCircles();
-                startSample();
-                this @=> GPad.activePad;
-
-                pad_background_colors[this.index] => GG.scene().backgroundColor;
-                int c;
-                0 => c;
-                while(c<3)
+                else
                 {
-                    pad_vibrant_colors[this.index][c].x => float vx;
-                    pad_vibrant_colors[this.index][c].y => float vy;
-                    pad_vibrant_colors[this.index][c].z => float vz;
-                    vibrant_colors[c].set(vx, vy, vz);
-                    c + 1 => c;
-                }
+                    // activate this pad, deactivate others
+                    if (GPad.activePad != null && GPad.activePad != this)
+                    {
+                        GPad.activePad.enter(NONE);
+                        GPad.activePad.shrinkCircles();
+                        GPad.activePad.stopSample();
+                        null @=> GPad.activePad;
+                    }
 
-                breathingCircle_material.color(@(vibrant_colors[0].x, vibrant_colors[0].y, vibrant_colors[0].z));
+                    enter(ACTIVE);
+                    instantiateCircles();
+                    startSample();
+                    this @=> GPad.activePad;
+
+                    pad_background_colors[this.index] => GG.scene().backgroundColor;
+                    int c;
+                    0 => c;
+                    while(c<3)
+                    {
+                        pad_vibrant_colors[this.index][c].x => float vx;
+                        pad_vibrant_colors[this.index][c].y => float vy;
+                        pad_vibrant_colors[this.index][c].z => float vz;
+                        vibrant_colors[c].set(vx, vy, vz);
+                        c + 1 => c;
+                    }
+
+                    breathingCircle_material.color(@(vibrant_colors[0].x, vibrant_colors[0].y, vibrant_colors[0].z));
+                }
             }
         }
     }
@@ -585,6 +716,9 @@ class GPad extends GGen
 
     fun void startSample()
     {
+        // Ambience pads only (index <4)
+        if (index < 0 || index > 3) return; // no ambience for top pads
+
         if (sampleBuf == null)
         {
             new SndBuf @=> sampleBuf;
@@ -818,7 +952,6 @@ while (true)
 
     bg_time + GG.dt() => bg_time;
     float bg_angle; (bg_omega * bg_time) => bg_angle;
-    float sin_value; Math.sin(bg_angle) => sin_value;
 
     float scroll_delta; GWindow.scrollY() => scroll_delta;
     limit_circle_size + (scroll_delta * 0.05) => limit_circle_size;
