@@ -290,7 +290,7 @@ fun void placePads()
     (-frustrumHeight / 2.0 + padSpacing / 2.0) => topPadY;
     
     float vertical_gap;
-    (padSpacing * 0.4) => vertical_gap; 
+    (padSpacing * 0.4) => vertical_gap;
     
     int q;
     0 => q;
@@ -321,9 +321,8 @@ fun void placePads()
         q + 1 => q;
     }
 
-    // Place top pads at a greater vertical distance above the existing ones
-    // For example, use an additional multiplier (like 2.0) to increase spacing.
-     1.4 => float topPadsOffsetFactor; // adjust this factor as needed
+    // Add a fixed offset to raise the entire group of top pads
+     vertical_gap * 2.0 => float topPadsGroupOffset; // Adjust as desired
 
     int i;
     0 => i;
@@ -335,8 +334,8 @@ fun void placePads()
         (padSpacing * 0.3) => topPads[i].sca;
 
         float pY;
-        // Increase the vertical distance by using 'topPadsOffsetFactor'
-        (topPadY + ((NUM_PADS + i) * vertical_gap * topPadsOffsetFactor)) => pY;
+        // Use the same vertical_gap as the original pads for spacing, plus the fixed offset
+        (topPadY + ((NUM_PADS + i) * vertical_gap) + topPadsGroupOffset) => pY;
         pY => topPads[i].posY;
 
         float pX;
