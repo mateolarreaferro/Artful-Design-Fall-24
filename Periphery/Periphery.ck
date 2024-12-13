@@ -73,18 +73,13 @@ fun void updateCircleSize() {
     limit_circle_size => float max_circle_size;
     (max_circle_size - (min_circle_size * 0.6)) / 2.0 => float amplitude;
 
-    // Avoid extremely small amplitude
     if (amplitude < 0.0001) { 
         0.0001 => amplitude; 
     }
 
-    // Adjusted radius_rate to achieve desired times (2 s at min, 10 s at max)
     0.25 => float radius_rate;
-
-    // sin_speed = radius_rate / amplitude
     radius_rate / amplitude => float sin_speed;
 
-    // Increment sin_time
     sin_time + (sin_speed * GG.dt()) => sin_time;
 
     max_circle_size - (amplitude * (1.0 + Math.cos(sin_time))) => current_circle_size;
@@ -140,31 +135,24 @@ fun void placePads() {
     GG.camera().viewSize() => float frustrumHeight;
     frustrumHeight * aspect => float frustrumWidth;
     
-    // Original spacing calculation remains the same
     frustrumHeight / NUM_PADS => float padSpacing;
-    
-    // The top pad position is defined as before, without change
     float topPadY;
     (-frustrumHeight / 2.0 + padSpacing / 2.0) => topPadY;
     
-    // Use a smaller gap for subsequent pads
     float vertical_gap;
-    (padSpacing * 0.4) => vertical_gap; // Adjust factor as needed
+    (padSpacing * 0.4) => vertical_gap; 
     
     for (0 => int i; i < NUM_PADS; i++) {
         pads[i] @=> GPad pad;
         pad.init(mouse, i);
         pad --> padGroup;
-        
-        // Keep the pad size as before
+
         (padSpacing * 0.3) => pad.sca;
         
         float pY;
         if (i == 0) {
-            // Top pad remains exactly at the original position
             topPadY => pY;
         } else {
-            // Subsequent pads are placed closer together
             (topPadY + i * vertical_gap) => pY;
         }
         pY => pad.posY;
@@ -211,6 +199,9 @@ class GPad extends GGen {
     float targetVolume;
     float volumeStep;
     1.5 => float fadeTime;
+    
+    // Static reference to track the currently active pad
+    static GPad @activePad;
 
     fun void init(Mouse @ m, int idx) {
         if (mouse != null) return;
@@ -270,33 +261,40 @@ class GPad extends GGen {
     }
 
     fun void handleInput(int input) {
-        if (state == NONE) {
-            if (input == MOUSE_HOVER) {
+        if (input == MOUSE_HOVER) {
+            if (state == NONE) {
                 enter(HOVERED);
-            } else if (input == MOUSE_CLICK) {
-                enter(ACTIVE);
-                instantiateCircles();
-                startSample();
             }
-        } else if (state == HOVERED) {
-            if (input == MOUSE_EXIT) {
+        } else if (input == MOUSE_EXIT) {
+            if (state == HOVERED) {
                 enter(NONE);
-            } else if (input == MOUSE_CLICK) {
-                if (state == ACTIVE) {
-                    enter(NONE);
-                    shrinkCircles();
-                    stopSample();
-                } else {
-                    enter(ACTIVE);
-                    instantiateCircles();
-                    startSample();
-                }
             }
-        } else if (state == ACTIVE) {
-            if (input == MOUSE_CLICK) {
+        } else if (input == MOUSE_CLICK) {
+            // If currently ACTIVE and clicked again, deactivate
+            if (state == ACTIVE) {
                 enter(NONE);
                 shrinkCircles();
                 stopSample();
+                if (GPad.activePad == this) {
+                    null @=> GPad.activePad;
+                }
+            }
+            else {
+                // We are NONE or HOVERED and want to become ACTIVE
+                // Deactivate any currently active pad
+                if (GPad.activePad != null && GPad.activePad != this) {
+                    GPad.activePad.enter(NONE);
+                    GPad.activePad.shrinkCircles();
+                    GPad.activePad.stopSample();
+                    null @=> GPad.activePad;
+                }
+
+                // Now activate this pad
+                enter(ACTIVE);
+                instantiateCircles();
+                startSample();
+                this @=> GPad.activePad;
+
             }
         }
     }
@@ -606,7 +604,6 @@ while (true) {
     float scroll_delta; GWindow.scrollY() => scroll_delta;
     (limit_circle_size + (scroll_delta * 0.05)) => limit_circle_size;
 
-    // Increase max limit to 3.0 * min_circle_size (instead of 2.0)
     if (limit_circle_size < min_circle_size) { min_circle_size => limit_circle_size; }
     if (limit_circle_size > 3.0 * min_circle_size) { (3.0 * min_circle_size) => limit_circle_size; }
 
@@ -621,20 +618,3 @@ while (true) {
         }
     }
 }
-
-
-
-
-// different scenes
-// - forrest
-// - cafe
-// - noise
-// - music
-
-// auditory feedback
-// - note (inhale and exhale)
-// voice-based feedback (inhale and exhale)
-
-// interaction feedback
-// - hover sfx
-// - select sfx
