@@ -410,16 +410,16 @@ class GPad extends GGen {
             string filename;
 
             if (index == 0) {
-                "samples/Nature.wav" => filename;
-                0.6 => targetVolume;
+                "samples/Noise_Ambience.wav" => filename;
+                1.0 => targetVolume;
             } else if (index == 1) {
-                "samples/Rain.wav" => filename;
-                0.2 => targetVolume;
+                "samples/Cafe_Ambience.wav" => filename;
+                1.0 => targetVolume;
             } else if (index == 2) {
-                "samples/Beat.wav" => filename;
-                0.3 => targetVolume;
+                "samples/Forrest_Ambience.wav" => filename;
+                1.0 => targetVolume;
             } else if (index == 3) {
-                "samples/Drone.wav" => filename;
+                "samples/Drone_Ambience.wav" => filename;
                 1.0 => targetVolume;
             } else {
                 return;
@@ -621,3 +621,20 @@ while (true) {
         }
     }
 }
+
+
+
+
+// different scenes
+// - forrest
+// - cafe
+// - noise
+// - music
+
+// auditory feedback
+// - note (inhale and exhale)
+// voice-based feedback (inhale and exhale)
+
+// interaction feedback
+// - hover sfx
+// - select sfx
