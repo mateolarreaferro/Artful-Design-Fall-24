@@ -104,7 +104,10 @@ CircleGeometry breathingCircle_geo;
 FlatMaterial breathingCircle_material;
 GMesh breathingCircle_mesh(breathingCircle_geo, breathingCircle_material) --> GG.scene();
 @(circle_center.x, circle_center.y, env_circle_z) => breathingCircle_mesh.pos;
-breathingCircle_material.color(@(vibrant_colors[0].x, vibrant_colors[0].y, vibrant_colors[0].z));
+
+// Set the breathingCircle color to match the background
+breathingCircle_material.color(@(default_background_color.x, default_background_color.y, default_background_color.z));
+
 base_circle_size => float current_circle_size;
 current_circle_size => float previous_circle_size;
 1 => int was_increasing; 
@@ -411,7 +414,7 @@ class GPad extends GGen
                         vibrant_colors[c].set(vx, vy, vz);
                         c + 1 => c;
                     }
-                    breathingCircle_material.color(@(vibrant_colors[0].x, vibrant_colors[0].y, vibrant_colors[0].z));
+                    breathingCircle_material.color(@(default_background_color.x, default_background_color.y, default_background_color.z));
                 }
             }
             else
