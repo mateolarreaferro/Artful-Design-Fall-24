@@ -1,11 +1,12 @@
 // Set up the camera and background
 GG.camera().orthographic();
 
-// Global variables for inhalation pads
-SndBuf inhalationInhale1, inhalationExhale1, inhalationInhale2, inhalationExhale2;
-0 => int inhalationPadSelection; // 0=none,1=first top pad,2=second top pad
+// Global variables for inhalation pads as a bitmask
+// 0 = none, 1 = first top pad, 2 = second top pad, 3 = both
+0 => int inhalationPadSelection; 
 
 // Load short inhale/exhale samples
+SndBuf inhalationInhale1, inhalationExhale1, inhalationInhale2, inhalationExhale2;
 new SndBuf @=> inhalationInhale1;
 new SndBuf @=> inhalationExhale1;
 new SndBuf @=> inhalationInhale2;
@@ -191,15 +192,16 @@ fun void updateCircleSize()
 
     if (is_increasing != was_increasing)
     {
+        // On inhale
         if (is_increasing == 1)
         {
             text.text("inhale");
-            // Play inhale sample if selected
-            if (inhalationPadSelection == 1)
+            // Play inhale samples if top pads selected
+            if ((inhalationPadSelection & 1) != 0)
             {
                 playShortSample(inhalationInhale1);
             }
-            else if (inhalationPadSelection == 2)
+            if ((inhalationPadSelection & 2) != 0)
             {
                 playShortSample(inhalationInhale2);
             }
@@ -207,12 +209,12 @@ fun void updateCircleSize()
         else
         {
             text.text("exhale");
-            // Play exhale sample if selected
-            if (inhalationPadSelection == 1)
+            // Play exhale samples if top pads selected
+            if ((inhalationPadSelection & 1) != 0)
             {
                 playShortSample(inhalationExhale1);
             }
-            else if (inhalationPadSelection == 2)
+            if ((inhalationPadSelection & 2) != 0)
             {
                 playShortSample(inhalationExhale2);
             }
@@ -245,7 +247,7 @@ GGen padGroup --> GG.scene();
 4 => int NUM_PADS;
 GPad pads[NUM_PADS];
 
-// Two new top pads for inhale/exhale selection
+// Two new top pads
 2 => int NUM_TOP_PADS;
 GPad topPads[NUM_TOP_PADS];
 
@@ -319,11 +321,12 @@ fun void placePads()
         q + 1 => q;
     }
 
+    // Place top pads above the existing ones
     int i;
     0 => i;
     while(i<NUM_TOP_PADS)
     {
-        topPads[i].init(mouse, 100+i); // distinct index to differentiate them
+        topPads[i].init(mouse, 100+i);
         topPads[i] --> padGroup;
 
         (padSpacing * 0.3) => topPads[i].sca;
@@ -370,7 +373,9 @@ class GPad extends GGen
     2 => MOUSE_CLICK;
 
     vec3 colorMap[3];
+    static GPad @activePad;
 
+    // Ambience pads only (0-3) use circles, top pads don't
     new GMesh[5] @=> GMesh bg_circle_meshes[];
     new CircleGeometry[5] @=> CircleGeometry bg_circle_geometries[];
     new FlatMaterial[5] @=> FlatMaterial bg_circle_materials[];
@@ -387,7 +392,7 @@ class GPad extends GGen
     float volumeStep;
     1.5 => float fadeTime;
     
-    static GPad @activePad;
+    // No single activePad logic needed for top pads now
 
     fun void init(Mouse @ m, int idx)
     {
@@ -481,55 +486,54 @@ class GPad extends GGen
         }
         else if (input == MOUSE_CLICK)
         {
+            // Check if top pad
             if (this.index >= 100 && this.index < 102)
             {
-                // Top inhalation pads
+                // Toggle this top pad's bit without circles or sample logic
                 if (state == ACTIVE)
                 {
                     // deactivate
                     enter(NONE);
-                    shrinkCircles();
-                    stopSample(); // no ambience for top pads
-                    if (GPad.activePad == this)
-                    {
-                        null @=> GPad.activePad;
-                    }
-                    0 => inhalationPadSelection;
-                }
-                else
-                {
-                    // activate this top pad, deactivate the other if needed
-                    if (GPad.activePad != null && GPad.activePad.index >=100 && GPad.activePad.index<102 && GPad.activePad != this)
-                    {
-                        GPad.activePad.enter(NONE);
-                        GPad.activePad.shrinkCircles();
-                        GPad.activePad.stopSample();
-                        null @=> GPad.activePad;
-                    }
-
-                    enter(ACTIVE);
-                    instantiateCircles();
-                    this @=> GPad.activePad;
-
+                    // Turn off this bit
                     if (this.index == 100)
                     {
-                        1 => inhalationPadSelection;
+                        // clear bit 1
+                        inhalationPadSelection & ~1 => inhalationPadSelection;
                     }
                     else
                     {
-                        2 => inhalationPadSelection;
+                        // clear bit 2
+                        inhalationPadSelection & ~2 => inhalationPadSelection;
+                    }
+                }
+                else
+                {
+                    // activate this top pad (no impact on other pads)
+                    enter(ACTIVE);
+                    if (this.index == 100)
+                    {
+                        // set bit 1
+                        inhalationPadSelection | 1 => inhalationPadSelection;
+                    }
+                    else
+                    {
+                        // set bit 2
+                        inhalationPadSelection | 2 => inhalationPadSelection;
                     }
                 }
             }
             else
             {
-                // Ambience pads (index 0 to 3)
+                // Ambience pads (0-3)
                 if (state == ACTIVE)
                 {
                     // deactivate
                     enter(NONE);
                     shrinkCircles();
                     stopSample();
+                    // revert background if this was the only active ambience pad
+                    // check if activePad logic needed - previously we had single activePad
+                    // If this ambience pad was activePad, restore default
                     if (GPad.activePad == this)
                     {
                         null @=> GPad.activePad;
@@ -597,7 +601,7 @@ class GPad extends GGen
 
         int i;
         0 => i;
-        if (state == ACTIVE)
+        if (state == ACTIVE && this.index < 4)
         {
             while(i<bg_circle_meshes.size())
             {
@@ -662,6 +666,9 @@ class GPad extends GGen
 
     fun void instantiateCircles()
     {
+        // Only for ambience pads (index <4), top pads do nothing here
+        if (index >=4) return;
+
         int i;
         0 => i;
         while(i<5)
@@ -702,6 +709,9 @@ class GPad extends GGen
 
     fun void shrinkCircles()
     {
+        // Only for ambience pads
+        if (index >=4) return;
+
         int i;
         0 => i;
         while(i<bg_circle_meshes.size())
@@ -716,8 +726,8 @@ class GPad extends GGen
 
     fun void startSample()
     {
-        // Ambience pads only (index <4)
-        if (index < 0 || index > 3) return; // no ambience for top pads
+        // Only for ambience pads (index <4)
+        if (index < 0 || index > 3) return;
 
         if (sampleBuf == null)
         {
@@ -889,6 +899,8 @@ while(i<MAX_PARTICLES)
 
 fun void instantiateParticles()
 {
+    // This function remains as is for ambience logic if needed
+    // Not related to top pads
     int i;
     0 => i;
     while(i<10)
